@@ -22,6 +22,9 @@ internal sealed class LlmSystemConfigProvider : ILlmSystemConfigProvider
 
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(60);
 
+    private const decimal DefaultDailyBudgetUsd = 10.00m;
+    private const decimal DefaultMonthlyBudgetUsd = 100.00m;
+
     public LlmSystemConfigProvider(
         IServiceScopeFactory scopeFactory,
         IOptions<AiProviderSettings> aiSettings,
@@ -53,13 +56,32 @@ internal sealed class LlmSystemConfigProvider : ILlmSystemConfigProvider
     public async Task<decimal> GetDailyBudgetUsdAsync(CancellationToken ct = default)
     {
         var config = await GetCachedConfigAsync(ct).ConfigureAwait(false);
-        return config?.DailyBudgetUsd ?? 10.00m;
+        return config?.DailyBudgetUsd ?? DefaultDailyBudgetUsd;
     }
 
     public async Task<decimal> GetMonthlyBudgetUsdAsync(CancellationToken ct = default)
     {
         var config = await GetCachedConfigAsync(ct).ConfigureAwait(false);
-        return config?.MonthlyBudgetUsd ?? 100.00m;
+        return config?.MonthlyBudgetUsd ?? DefaultMonthlyBudgetUsd;
+    }
+
+    public (int FailureThreshold, int OpenDurationSeconds, int SuccessThreshold) GetCircuitBreakerThresholdsSnapshot()
+    {
+        // Read from cache synchronously — no DB call, safe for non-async contexts
+        lock (_cacheLock)
+        {
+            if (_cachedConfig != null && DateTime.UtcNow < _cacheExpiry)
+            {
+                return (
+                    _cachedConfig.CircuitBreakerFailureThreshold,
+                    _cachedConfig.CircuitBreakerOpenDurationSeconds,
+                    _cachedConfig.CircuitBreakerSuccessThreshold);
+            }
+        }
+
+        // Cache not populated yet — return appsettings defaults
+        var cb = _aiSettings.Value.CircuitBreaker;
+        return (cb.FailureThreshold, cb.OpenDurationSeconds, cb.SuccessThreshold);
     }
 
     public void InvalidateCache()
@@ -91,8 +113,16 @@ internal sealed class LlmSystemConfigProvider : ILlmSystemConfigProvider
 
             lock (_cacheLock)
             {
-                _cachedConfig = config;
-                _cacheExpiry = DateTime.UtcNow.Add(CacheTtl);
+                // Double-check: another thread may have already refreshed the cache
+                if (DateTime.UtcNow >= _cacheExpiry)
+                {
+                    _cachedConfig = config;
+                    _cacheExpiry = DateTime.UtcNow.Add(CacheTtl);
+                }
+                else
+                {
+                    return _cachedConfig; // Another thread won the race
+                }
             }
 
             if (config != null)
@@ -105,6 +135,7 @@ internal sealed class LlmSystemConfigProvider : ILlmSystemConfigProvider
 
             return config;
         }
+#pragma warning disable CA1031
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to load LLM system config from DB, using appsettings defaults");
@@ -112,11 +143,15 @@ internal sealed class LlmSystemConfigProvider : ILlmSystemConfigProvider
             // Set cache expiry to prevent hammering DB on repeated failures
             lock (_cacheLock)
             {
-                _cachedConfig = null;
-                _cacheExpiry = DateTime.UtcNow.Add(CacheTtl);
+                if (DateTime.UtcNow >= _cacheExpiry)
+                {
+                    _cachedConfig = null;
+                    _cacheExpiry = DateTime.UtcNow.Add(CacheTtl);
+                }
             }
 
             return null;
         }
+#pragma warning restore CA1031
     }
 }

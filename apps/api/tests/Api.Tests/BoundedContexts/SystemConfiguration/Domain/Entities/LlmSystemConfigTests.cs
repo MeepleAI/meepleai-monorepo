@@ -91,6 +91,14 @@ public sealed class LlmSystemConfigTests
     }
 
     [Fact]
+    public void UpdateBudgetLimits_DailyExceedsMonthly_ThrowsArgumentException()
+    {
+        var config = LlmSystemConfig.CreateDefault();
+
+        Assert.Throws<ArgumentException>(() => config.UpdateBudgetLimits(500.00m, 100.00m));
+    }
+
+    [Fact]
     public void UpdateFallbackChain_ValidJson_UpdatesProperty()
     {
         var config = LlmSystemConfig.CreateDefault();

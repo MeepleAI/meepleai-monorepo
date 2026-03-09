@@ -156,4 +156,36 @@ public sealed class LlmSystemConfigProviderTests
         await provider.GetCircuitBreakerOpenDurationSecondsAsync();
         _repoMock.Verify(r => r.GetCurrentAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public void GetCircuitBreakerThresholdsSnapshot_CacheNotPopulated_ReturnsAppsettingsDefaults()
+    {
+        var provider = CreateProvider();
+
+        var (failure, open, success) = provider.GetCircuitBreakerThresholdsSnapshot();
+
+        Assert.Equal(7, failure); // From AiProviderSettings
+        Assert.Equal(45, open);
+        Assert.Equal(4, success);
+    }
+
+    [Fact]
+    public async Task GetCircuitBreakerThresholdsSnapshot_CachePopulated_ReturnsCachedValues()
+    {
+        var config = LlmSystemConfig.CreateDefault();
+        config.UpdateCircuitBreakerSettings(10, 60, 5);
+        _repoMock.Setup(r => r.GetCurrentAsync(It.IsAny<CancellationToken>())).ReturnsAsync(config);
+
+        var provider = CreateProvider();
+
+        // Populate cache via async call first
+        await provider.GetCircuitBreakerFailureThresholdAsync();
+
+        // Synchronous snapshot should now return DB values
+        var (failure, open, success) = provider.GetCircuitBreakerThresholdsSnapshot();
+
+        Assert.Equal(10, failure);
+        Assert.Equal(60, open);
+        Assert.Equal(5, success);
+    }
 }

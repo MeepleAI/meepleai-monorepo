@@ -79,6 +79,7 @@ public sealed class LlmSystemConfig
     {
         if (dailyBudgetUsd < 0) throw new ArgumentException("DailyBudgetUsd cannot be negative", nameof(dailyBudgetUsd));
         if (monthlyBudgetUsd < 0) throw new ArgumentException("MonthlyBudgetUsd cannot be negative", nameof(monthlyBudgetUsd));
+        if (dailyBudgetUsd > monthlyBudgetUsd) throw new ArgumentException("DailyBudgetUsd cannot exceed MonthlyBudgetUsd", nameof(dailyBudgetUsd));
 
         DailyBudgetUsd = dailyBudgetUsd;
         MonthlyBudgetUsd = monthlyBudgetUsd;

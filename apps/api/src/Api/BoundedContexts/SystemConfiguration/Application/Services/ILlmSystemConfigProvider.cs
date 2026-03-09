@@ -32,6 +32,12 @@ public interface ILlmSystemConfigProvider
     Task<decimal> GetMonthlyBudgetUsdAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// Get a synchronous snapshot of the current thresholds (from cache or defaults).
+    /// Safe to call from non-async contexts (e.g., Singleton initialization).
+    /// </summary>
+    (int FailureThreshold, int OpenDurationSeconds, int SuccessThreshold) GetCircuitBreakerThresholdsSnapshot();
+
+    /// <summary>
     /// Invalidate the cached configuration (e.g., after admin update).
     /// </summary>
     void InvalidateCache();

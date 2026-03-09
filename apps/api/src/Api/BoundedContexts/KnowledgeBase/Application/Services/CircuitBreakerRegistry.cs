@@ -40,10 +40,8 @@ internal sealed class CircuitBreakerRegistry : ICircuitBreakerRegistry
             if (_circuitBreakers.ContainsKey(providerName))
                 return;
 
-            // Issue #5498: Read configurable thresholds (DB-first with appsettings fallback, cached 60s)
-            var failureThreshold = _configProvider.GetCircuitBreakerFailureThresholdAsync().GetAwaiter().GetResult();
-            var openDurationSeconds = _configProvider.GetCircuitBreakerOpenDurationSecondsAsync().GetAwaiter().GetResult();
-            var successThreshold = _configProvider.GetCircuitBreakerSuccessThresholdAsync().GetAwaiter().GetResult();
+            // Issue #5498: Read configurable thresholds (from cache or appsettings defaults — no async/DB call)
+            var (failureThreshold, openDurationSeconds, successThreshold) = _configProvider.GetCircuitBreakerThresholdsSnapshot();
 
             var breaker = new CircuitBreakerState(failureThreshold, openDurationSeconds, successThreshold);
             var capturedProvider = providerName;
