@@ -16,7 +16,7 @@ internal static class UnsubscribeEndpoints
 {
     public static void MapUnsubscribeEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/v1/notifications/unsubscribe", HandleUnsubscribe)
+        app.MapGet("/notifications/unsubscribe", HandleUnsubscribe)
             .WithTags("Notifications - Unsubscribe")
             .WithName("UnsubscribeFromEmail")
             .WithSummary("One-click email unsubscribe (GDPR)")
