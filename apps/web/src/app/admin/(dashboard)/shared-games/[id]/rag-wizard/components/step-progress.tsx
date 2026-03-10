@@ -104,6 +104,8 @@ function StatusBadge({ status }: { status: FileStatus }) {
 
 // ── Job SSE Tracker (per file with a processingJobId) ───────────────────
 
+const PROCESSING_TIMEOUT_MS = 300_000; // 5 minutes
+
 function JobTracker({
   jobId,
   onTerminal,
@@ -114,7 +116,9 @@ function JobTracker({
   const { connectionState } = useJobSSE(jobId);
   const { data: jobDetail } = useJobDetail(jobId, connectionState === 'connected');
   const notifiedRef = useRef(false);
+  const startTimeRef = useRef(Date.now());
 
+  // Terminal status from job detail
   useEffect(() => {
     if (!jobDetail || notifiedRef.current) return;
     if (jobDetail.status === 'Completed') {
@@ -125,6 +129,27 @@ function JobTracker({
       onTerminal('failed');
     }
   }, [jobDetail, onTerminal]);
+
+  // Timeout: if processing exceeds 5 minutes, treat as failed
+  useEffect(() => {
+    if (notifiedRef.current) return;
+    const timer = setTimeout(() => {
+      if (!notifiedRef.current) {
+        notifiedRef.current = true;
+        onTerminal('failed');
+      }
+    }, PROCESSING_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [onTerminal]);
+
+  // SSE connection error: if connection is in 'error' state, treat as failed
+  useEffect(() => {
+    if (notifiedRef.current) return;
+    if (connectionState === 'error') {
+      notifiedRef.current = true;
+      onTerminal('failed');
+    }
+  }, [connectionState, onTerminal]);
 
   // Show pipeline steps from job detail
   const currentStep = jobDetail?.currentStep;

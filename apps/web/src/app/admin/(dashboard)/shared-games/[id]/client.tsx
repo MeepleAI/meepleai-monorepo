@@ -698,7 +698,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
       </Tabs>
 
       {/* RAG Wizard Sheet */}
-      <Sheet open={showRagWizard} onOpenChange={setShowRagWizard}>
+      <Sheet open={showRagWizard} onOpenChange={(open) => { if (!open) handleRagWizardClose(); else setShowRagWizard(true); }}>
         <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Aggiungi RAG — {game.title}</SheetTitle>

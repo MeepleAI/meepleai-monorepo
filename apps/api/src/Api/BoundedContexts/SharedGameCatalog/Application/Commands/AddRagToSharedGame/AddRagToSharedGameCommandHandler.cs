@@ -125,6 +125,10 @@ internal sealed class AddRagToSharedGameCommandHandler : ICommandHandler<AddRagT
                 "PDF enqueued for processing: ProcessingJobId={ProcessingJobId}",
                 processingJobId);
         }
+        catch (OperationCanceledException)
+        {
+            throw; // propagate cancellation
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex,
