@@ -34,7 +34,14 @@ internal sealed class CancelGameNightCommandHandler : ICommandHandler<CancelGame
         if (gameNight.OrganizerId != command.UserId)
             throw new UnauthorizedAccessException("Only the organizer can cancel a game night");
 
-        gameNight.Cancel();
+        try
+        {
+            gameNight.Cancel();
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new ConflictException(ex.Message);
+        }
 
         await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

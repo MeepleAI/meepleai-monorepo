@@ -87,6 +87,7 @@ internal sealed class GameNightReminderJob : IJob
                         ct).ConfigureAwait(false);
 
                     gameNight.MarkReminder24hSent();
+                    await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
                     await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
                     reminder24hCount++;
@@ -125,6 +126,7 @@ internal sealed class GameNightReminderJob : IJob
                         ct).ConfigureAwait(false);
 
                     gameNight.MarkReminder1hSent();
+                    await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
                     await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
                     reminder1hCount++;

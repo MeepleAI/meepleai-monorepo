@@ -38,6 +38,12 @@ internal sealed class CreateGameNightCommandHandler : ICommandHandler<CreateGame
             maxPlayers: command.MaxPlayers,
             gameIds: command.GameIds);
 
+        // Pre-create RSVP entries for invited users so PublishHandler sends invitations.
+        if (command.InvitedUserIds is { Count: > 0 })
+        {
+            gameNight.PreInvite(command.InvitedUserIds);
+        }
+
         await _repository.AddAsync(gameNight, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

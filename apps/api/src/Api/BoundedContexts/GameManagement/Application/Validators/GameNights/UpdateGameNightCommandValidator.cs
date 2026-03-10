@@ -28,7 +28,7 @@ internal sealed class UpdateGameNightCommandValidator : AbstractValidator<Update
             .WithMessage("Title cannot exceed 200 characters");
 
         RuleFor(x => x.ScheduledAt)
-            .GreaterThan(DateTimeOffset.UtcNow.AddHours(1))
+            .Must(scheduledAt => scheduledAt > DateTimeOffset.UtcNow.AddHours(1))
             .WithMessage("Scheduled time must be at least 1 hour in the future");
 
         RuleFor(x => x.Description)

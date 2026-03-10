@@ -187,9 +187,35 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Pre-invites users during Draft creation. RSVPs are created with Pending status
+    /// but no domain events are raised until Publish().
+    /// </summary>
+    public void PreInvite(List<Guid> userIds)
+    {
+        if (Status != GameNightStatus.Draft)
+            throw new InvalidOperationException("Can only pre-invite to draft game nights");
+
+        foreach (var userId in userIds)
+        {
+            if (_rsvps.All(r => r.UserId != userId))
+            {
+                _rsvps.Add(GameNightRsvp.Create(Id, userId));
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets the RSVP for a specific user, or null if not invited.
     /// </summary>
     public GameNightRsvp? GetRsvp(Guid userId) => _rsvps.FirstOrDefault(r => r.UserId == userId);
+
+    /// <summary>
+    /// Raises a GameNightRsvpReceivedEvent domain event for notification dispatch.
+    /// </summary>
+    public void AddRsvpReceivedEvent(Guid responderId, RsvpStatus response, Guid organizerId)
+    {
+        AddDomainEvent(new GameNightRsvpReceivedEvent(Id, responderId, response, organizerId));
+    }
 
     /// <summary>
     /// Gets the number of accepted RSVPs.

@@ -34,7 +34,14 @@ internal sealed class InviteToGameNightCommandHandler : ICommandHandler<InviteTo
         if (gameNight.OrganizerId != command.UserId)
             throw new UnauthorizedAccessException("Only the organizer can invite users to a game night");
 
-        gameNight.AddInvitees(command.InvitedUserIds);
+        try
+        {
+            gameNight.AddInvitees(command.InvitedUserIds);
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new ConflictException(ex.Message);
+        }
 
         await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

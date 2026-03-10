@@ -34,9 +34,16 @@ internal sealed class PublishGameNightCommandHandler : ICommandHandler<PublishGa
         if (gameNight.OrganizerId != command.UserId)
             throw new UnauthorizedAccessException("Only the organizer can publish a game night");
 
-        // Publish with existing invited user IDs from RSVPs (if any were pre-invited)
+        // Publish with invited user IDs from existing RSVPs (pre-invited during Create)
         var existingInvitedIds = gameNight.Rsvps.Select(r => r.UserId).ToList();
-        gameNight.Publish(existingInvitedIds);
+        try
+        {
+            gameNight.Publish(existingInvitedIds);
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new ConflictException(ex.Message);
+        }
 
         await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

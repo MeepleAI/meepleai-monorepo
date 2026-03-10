@@ -71,8 +71,8 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
     public async Task<IReadOnlyList<GameNightEvent>> GetEventsNeedingReminderAsync(
         DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default)
     {
+        // No AsNoTracking — reminder job must persist SentAt flag changes via SaveChangesAsync.
         var entities = await DbContext.GameNightEvents
-            .AsNoTracking()
             .Include(e => e.Rsvps)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt >= from && e.ScheduledAt <= to)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

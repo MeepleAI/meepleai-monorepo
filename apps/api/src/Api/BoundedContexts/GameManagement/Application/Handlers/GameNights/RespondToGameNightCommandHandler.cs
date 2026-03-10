@@ -5,29 +5,25 @@ using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
-using MediatR;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNights;
 
 /// <summary>
 /// Handles RSVP responses to game night invitations.
 /// Issue #46: GameNight API endpoints.
-/// Issue #43: Uses NotFoundException, checks IsFull for Accept, publishes GameNightRsvpReceivedEvent.
+/// Issue #43: Uses NotFoundException, checks IsFull for Accept, raises domain event via aggregate.
 /// </summary>
 internal sealed class RespondToGameNightCommandHandler : ICommandHandler<RespondToGameNightCommand>
 {
     private readonly IGameNightEventRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMediator _mediator;
 
     public RespondToGameNightCommandHandler(
         IGameNightEventRepository repository,
-        IUnitOfWork unitOfWork,
-        IMediator mediator)
+        IUnitOfWork unitOfWork)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
     public async Task Handle(RespondToGameNightCommand command, CancellationToken cancellationToken)
@@ -44,7 +40,7 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
         {
             case RsvpStatus.Accepted:
                 if (gameNight.IsFull)
-                    throw new InvalidOperationException("This game night is full and cannot accept more players");
+                    throw new ConflictException("This game night is full and cannot accept more players");
                 rsvp.Accept();
                 break;
             case RsvpStatus.Declined:
@@ -57,11 +53,10 @@ internal sealed class RespondToGameNightCommandHandler : ICommandHandler<Respond
                 throw new ArgumentOutOfRangeException(nameof(command), $"Invalid RSVP response: {command.Response}");
         }
 
+        // Use domain event pattern for consistency — dispatched by UnitOfWork after SaveChanges.
+        gameNight.AddRsvpReceivedEvent(command.UserId, command.Response, gameNight.OrganizerId);
+
         await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        await _mediator.Publish(
-            new GameNightRsvpReceivedEvent(command.GameNightId, command.UserId, command.Response, gameNight.OrganizerId),
-            cancellationToken).ConfigureAwait(false);
     }
 }

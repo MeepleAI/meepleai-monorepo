@@ -34,13 +34,20 @@ internal sealed class UpdateGameNightCommandHandler : ICommandHandler<UpdateGame
         if (gameNight.OrganizerId != command.UserId)
             throw new UnauthorizedAccessException("Only the organizer can update a game night");
 
-        gameNight.Update(
-            command.Title,
-            command.Description,
-            command.ScheduledAt,
-            command.Location,
-            command.MaxPlayers,
-            command.GameIds);
+        try
+        {
+            gameNight.Update(
+                command.Title,
+                command.Description,
+                command.ScheduledAt,
+                command.Location,
+                command.MaxPlayers,
+                command.GameIds);
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new ConflictException(ex.Message);
+        }
 
         await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
