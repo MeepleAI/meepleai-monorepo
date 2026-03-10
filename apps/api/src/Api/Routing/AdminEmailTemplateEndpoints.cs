@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.Filters;
@@ -67,11 +68,15 @@ internal static class AdminEmailTemplateEndpoints
 
     private static async Task<IResult> CreateEmailTemplate(
         CreateEmailTemplateRequest request,
+        HttpContext context,
         IMediator mediator,
         CancellationToken cancellationToken = default)
     {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        var userId = session!.User!.Id;
+
         var id = await mediator.Send(
-            new CreateEmailTemplateCommand(request.Name, request.Locale, request.Subject, request.HtmlBody, request.CreatedBy),
+            new CreateEmailTemplateCommand(request.Name, request.Locale, request.Subject, request.HtmlBody, userId),
             cancellationToken).ConfigureAwait(false);
 
         return Results.Created($"/admin/email-templates/{id}", new { id });
@@ -80,11 +85,15 @@ internal static class AdminEmailTemplateEndpoints
     private static async Task<IResult> UpdateEmailTemplate(
         Guid id,
         UpdateEmailTemplateRequest request,
+        HttpContext context,
         IMediator mediator,
         CancellationToken cancellationToken = default)
     {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        var userId = session!.User!.Id;
+
         var result = await mediator.Send(
-            new UpdateEmailTemplateCommand(id, request.Subject, request.HtmlBody, request.ModifiedBy),
+            new UpdateEmailTemplateCommand(id, request.Subject, request.HtmlBody, userId),
             cancellationToken).ConfigureAwait(false);
 
         return result ? Results.Ok(new { success = true }) : Results.NotFound();
@@ -110,7 +119,7 @@ internal static class AdminEmailTemplateEndpoints
             cancellationToken).ConfigureAwait(false);
 
         return !string.IsNullOrEmpty(result)
-            ? Results.Content(result, "text/html")
+            ? Results.Ok(new { html = result })
             : Results.NotFound();
     }
 
@@ -128,6 +137,6 @@ internal static class AdminEmailTemplateEndpoints
     }
 }
 
-internal record CreateEmailTemplateRequest(string Name, string Locale, string Subject, string HtmlBody, Guid CreatedBy);
-internal record UpdateEmailTemplateRequest(string Subject, string HtmlBody, Guid ModifiedBy);
+internal record CreateEmailTemplateRequest(string Name, string Locale, string Subject, string HtmlBody);
+internal record UpdateEmailTemplateRequest(string Subject, string HtmlBody);
 internal record PreviewEmailTemplateRequest(Dictionary<string, string>? TestData);
