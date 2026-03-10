@@ -3,32 +3,32 @@
 **Epic**: #33
 **Date**: 2026-03-10
 **Tester**: Manual QA
-**Prerequisites**: Docker running, MailHog on `localhost:8025`, API on `localhost:8080`, Web on `localhost:3000`
+**Prerequisites**: Docker running, Mailpit on `localhost:8025`, API on `localhost:8080`, Web on `localhost:3000`
 
 ---
 
-## Phase 0: Dev Infrastructure (MailHog)
+## Phase 0: Dev Infrastructure (Mailpit)
 
-### T0.1 — MailHog Service Startup
+### T0.1 — Mailpit Service Startup
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | `docker compose --profile dev up -d mailhog` | Container `meepleai-mailhog` running |
-| 2 | Open `http://localhost:8025` | MailHog Web UI loads, empty inbox |
-| 3 | `curl -s http://localhost:8025/api/v2/messages \| jq '.total'` | Returns `0` |
+| 1 | `docker compose --profile dev up -d mailpit` | Container `mailpit` running |
+| 2 | Open `http://localhost:8025` | Mailpit Web UI loads, empty inbox |
+| 3 | `curl -s http://localhost:8025/api/v1/messages \| jq '.total'` | Returns `0` |
 
-### T0.2 — EmailService Uses MailHog in Dev
+### T0.2 — EmailService Uses Mailpit in Dev
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Start API: `cd apps/api/src/Api && dotnet run` | No SMTP connection errors in logs |
 | 2 | Call `POST /api/v1/admin/emails/test` with `{"to":"test@example.com"}` | 200 OK |
-| 3 | Check MailHog UI (`localhost:8025`) | Test email visible with subject, sender `noreply@meepleai.dev` |
-| 4 | Click email in MailHog | HTML body renders correctly |
+| 3 | Check Mailpit UI (`localhost:8025`) | Test email visible with subject, sender `noreply@meepleai.local` |
+| 4 | Click email in Mailpit | HTML body renders correctly |
 
 ### T0.3 — No Impact on Production Config
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Check `docker compose --profile prod config` | No mailhog service in prod profile |
-| 2 | Check `appsettings.Production.json` | No MailHog references |
+| 1 | Check `docker compose --profile prod config` | No mailpit service in prod profile |
+| 2 | Check `appsettings.Production.json` | No Mailpit references |
 
 ---
 
@@ -39,18 +39,18 @@
 |------|--------|-----------------|
 | 1 | Upload a PDF via API | Processing completes |
 | 2 | `GET /api/v1/notifications?limit=1` | Notification has `correlationId` (non-null GUID) |
-| 3 | Check MailHog for the email | Email headers/metadata contain same `correlationId` |
+| 3 | Check Mailpit for the email | Email headers/metadata contain same `correlationId` |
 | 4 | Query DB: `SELECT correlation_id FROM email_queue_items ORDER BY created_at DESC LIMIT 1` | Same GUID as notification |
 
 ### T1.2 — Unsubscribe Link (GDPR)
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Trigger any email notification (e.g., PDF ready) | Email received in MailHog |
+| 1 | Trigger any email notification (e.g., PDF ready) | Email received in Mailpit |
 | 2 | Inspect email HTML footer | Contains "Disattiva queste notifiche" link |
 | 3 | Check email headers | `List-Unsubscribe` and `List-Unsubscribe-Post` headers present |
 | 4 | Click unsubscribe link in browser | Confirmation page: "Hai disattivato le email per [tipo]" |
 | 5 | `GET /api/v1/notifications/preferences` | The email preference for that type is now `false` |
-| 6 | Trigger same notification type again | In-app notification created, but NO email in MailHog |
+| 6 | Trigger same notification type again | In-app notification created, but NO email in Mailpit |
 | 7 | Click expired unsubscribe link (>30 days) | Error: "Link scaduto" |
 
 ### T1.3 — Admin Email Management (Real API)
@@ -58,7 +58,7 @@
 |------|--------|-----------------|
 | 1 | Login as admin, go to `/admin/monitor` → Email Management tab | Page loads without errors |
 | 2 | Check KPI cards | Shows real numbers (Sent 24h, Pending, Failed, Dead Letter) |
-| 3 | Send a test email from "Send Test" form | Email appears in MailHog within 30s |
+| 3 | Send a test email from "Send Test" form | Email appears in Mailpit within 30s |
 | 4 | Force an email to fail (invalid SMTP temp) | Email appears in "Failed" list after retries |
 | 5 | Wait for email to reach Dead Letter (3 retries) | Appears in Dead Letter table |
 | 6 | Click "Retry" on dead letter email | Status resets to Pending, disappears from Dead Letter |
@@ -103,7 +103,7 @@
 |------|--------|-----------------|
 | 1 | Create game night with 3 invited users | Draft event created |
 | 2 | `POST /api/v1/game-nights/{id}/publish` | Status changes to `Published` |
-| 3 | Check MailHog | 3 invitation emails sent (one per invitee) |
+| 3 | Check Mailpit | 3 invitation emails sent (one per invitee) |
 | 4 | Check invitation email content | Title, date, location, RSVP buttons (Accetta/Rifiuta/Forse) |
 | 5 | `GET /api/v1/notifications` (as invitee) | In-app notification: "X ti ha invitato a una serata giochi" |
 | 6 | Try to publish already Published event | 400 "Evento già pubblicato" |
@@ -122,7 +122,7 @@
 ### T2.4 — One-Click RSVP from Email
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Open invitation email in MailHog | Contains 3 RSVP action links |
+| 1 | Open invitation email in Mailpit | Contains 3 RSVP action links |
 | 2 | Copy "Accetta" link URL | Contains JWT token |
 | 3 | Open URL in browser | RSVP registered, redirect to event detail page |
 | 4 | Open same URL again | "Hai già risposto" or updates RSVP (idempotent) |
@@ -133,8 +133,8 @@
 |------|--------|-----------------|
 | 1 | Create game night for ~24h from now | Published with invitees |
 | 2 | Wait for `GameNightReminderJob` to run (every 15 min) | Job detects event in 24h window |
-| 3 | Check MailHog | Reminder emails to Accepted users |
-| 4 | Check MailHog for Pending users | Different email: "Rispondi all'invito!" |
+| 3 | Check Mailpit | Reminder emails to Accepted users |
+| 4 | Check Mailpit for Pending users | Different email: "Rispondi all'invito!" |
 | 5 | Check `Reminder24hSentAt` in DB | Set to current timestamp |
 | 6 | Wait for next job run | NO duplicate reminders sent |
 
@@ -143,14 +143,14 @@
 |------|--------|-----------------|
 | 1 | Create game night for ~1h from now | Published with Accepted invitees |
 | 2 | Wait for job to detect 1h window | Job fires |
-| 3 | Check MailHog | NO new emails (1h reminder is push-only) |
+| 3 | Check Mailpit | NO new emails (1h reminder is push-only) |
 | 4 | Check notification DB (or push logs) | Push notification attempted for Accepted users |
 
 ### T2.7 — Cancellation
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | `POST /api/v1/game-nights/{id}/cancel` (as organizer) | Status → Cancelled |
-| 2 | Check MailHog | Cancellation emails to ALL invitees |
+| 2 | Check Mailpit | Cancellation emails to ALL invitees |
 | 3 | Check in-app notifications | All invitees have cancellation notification |
 | 4 | Try to RSVP to cancelled event | 400 "Evento annullato" |
 
@@ -159,7 +159,7 @@
 |------|--------|-----------------|
 | 1 | Disable `emailOnGameNightInvitation` for test user | Preference saved |
 | 2 | Invite user to new game night | In-app notification created |
-| 3 | Check MailHog | NO invitation email for that user |
+| 3 | Check Mailpit | NO invitation email for that user |
 | 4 | Re-enable preference | Future invitations include email |
 
 ---
@@ -235,15 +235,15 @@
 | 2 | Default test data pre-populated | Placeholders replaced with sample values |
 | 3 | Modify test data (change userName) | Preview updates |
 | 4 | Toggle desktop/mobile preview | Width changes (responsive check) |
-| 5 | Enter email address, click "Invia test" | Email sent to MailHog |
-| 6 | Check MailHog | Email matches preview exactly |
+| 5 | Enter email address, click "Invia test" | Email sent to Mailpit |
+| 6 | Check Mailpit | Email matches preview exactly |
 
 ### T4.4 — Template Loading from DB
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Edit "pdf_ready" IT template, publish new version | Active template updated |
 | 2 | Trigger PDF processing completion | Email sent |
-| 3 | Check MailHog | Email uses NEW template content |
+| 3 | Check Mailpit | Email uses NEW template content |
 | 4 | Delete active template from DB | No active template |
 | 5 | Trigger same notification | Email uses FALLBACK hardcoded template |
 
@@ -324,7 +324,7 @@
 | 1 | Admin edits "pdf_ready" template, publishes | New version active |
 | 2 | User uploads PDF, completes | Email uses new template |
 | 3 | Admin checks email stats | Sent count incremented |
-| 4 | Admin sends test email | Visible in MailHog |
+| 4 | Admin sends test email | Visible in Mailpit |
 | 5 | Simulate SMTP failure | Emails queue, retry, dead letter |
 | 6 | Admin retries dead letter | Email resent successfully |
 
@@ -342,10 +342,10 @@
 ## Test Environment Checklist
 
 Before testing, verify:
-- [ ] Docker containers running: PostgreSQL, Redis, Qdrant, MailHog
+- [ ] Docker containers running: PostgreSQL, Redis, Qdrant, Mailpit
 - [ ] API running on `localhost:8080` with dev configuration
 - [ ] Web running on `localhost:3000`
-- [ ] MailHog UI accessible on `localhost:8025`
+- [ ] Mailpit UI accessible on `localhost:8025`
 - [ ] Admin user created and can login
 - [ ] At least 3 test users created
 - [ ] At least 2 games in user library (for game night selection)
@@ -354,7 +354,7 @@ Before testing, verify:
 
 | Phase | Tests | Pass | Fail | Skip | Notes |
 |-------|-------|------|------|------|-------|
-| P0: MailHog | 3 | | | | |
+| P0: Mailpit | 3 | | | | |
 | P1: Quick Wins | 5 | | | | |
 | P2: Game Night BE | 8 | | | | |
 | P3: Game Night FE | 4 | | | | |

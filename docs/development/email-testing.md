@@ -79,14 +79,14 @@ mailpit:
   ports:
     - "127.0.0.1:1025:1025"  # SMTP
     - "127.0.0.1:8025:8025"  # Web UI
-  profiles: [dev, observability, full]
+  profiles: [dev, observability, full]  # Also available in observability profile
 ```
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| MailHog UI not loading | `docker compose --profile dev up -d mailpit` |
+| Mailpit UI not loading | `docker compose --profile dev up -d mailpit` |
 | Emails not appearing | Check API logs for SMTP errors |
 | Port 1025 occupied | `netstat -ano \| findstr :1025` → kill process |
 | Port 8025 occupied | `netstat -ano \| findstr :8025` → kill process |
