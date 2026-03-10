@@ -58,7 +58,7 @@ internal sealed class AddRagToSharedGameCommandHandler : ICommandHandler<AddRagT
 
         if (!uploadResult.Success || uploadResult.Document is null)
         {
-            throw new InvalidOperationException($"PDF upload failed: {uploadResult.Message}");
+            throw new ConflictException($"PDF upload failed: {uploadResult.Message}");
         }
 
         var pdfDocumentId = uploadResult.Document.Id;

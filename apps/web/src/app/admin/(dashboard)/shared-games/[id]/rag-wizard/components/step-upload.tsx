@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/primitives/button';
 // ── Constants ───────────────────────────────────────────────────────────
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_COUNT = 20;
 
 // ── Props ───────────────────────────────────────────────────────────────
 
@@ -44,8 +45,18 @@ export function StepUpload({ files, onFilesChange, onNext }: StepUploadProps) {
   const validateAndAddFiles = useCallback(
     (newFiles: FileList | File[]) => {
       const validFiles: File[] = [];
+      const remaining = MAX_FILE_COUNT - files.length;
+
+      if (remaining <= 0) {
+        toast.error(`Massimo ${MAX_FILE_COUNT} file consentiti`);
+        return;
+      }
 
       for (const file of Array.from(newFiles)) {
+        if (validFiles.length >= remaining) {
+          toast.error(`Massimo ${MAX_FILE_COUNT} file consentiti`);
+          break;
+        }
         if (file.type !== 'application/pdf') {
           toast.error(`"${file.name}" non e un PDF valido`);
           continue;

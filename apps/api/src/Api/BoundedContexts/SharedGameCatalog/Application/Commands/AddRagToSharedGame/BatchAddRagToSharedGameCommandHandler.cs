@@ -30,6 +30,10 @@ internal sealed class BatchAddRagToSharedGameCommandHandler
                 var result = await _mediator.Send(item, cancellationToken).ConfigureAwait(false);
                 results.Add(new BatchItemResult(item.SharedGameId, item.File.FileName, result, null));
             }
+            catch (OperationCanceledException)
+            {
+                throw; // propagate cancellation
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,

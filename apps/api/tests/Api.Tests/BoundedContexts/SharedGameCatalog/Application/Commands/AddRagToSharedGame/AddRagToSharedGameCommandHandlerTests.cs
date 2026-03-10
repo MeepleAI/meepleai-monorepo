@@ -231,7 +231,7 @@ public class AddRagToSharedGameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_PdfUploadFails_ThrowsInvalidOperationException()
+    public async Task Handle_PdfUploadFails_ThrowsConflictException()
     {
         // Arrange
         var sharedGameId = Guid.NewGuid();
@@ -244,7 +244,7 @@ public class AddRagToSharedGameCommandHandlerTests
             .ReturnsAsync(new PdfUploadResult(Success: false, Message: "Invalid file", Document: null));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+        var ex = await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
         Assert.Contains("PDF upload failed", ex.Message);

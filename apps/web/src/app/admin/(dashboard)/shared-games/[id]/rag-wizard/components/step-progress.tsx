@@ -116,19 +116,20 @@ function JobTracker({
   const { connectionState } = useJobSSE(jobId);
   const { data: jobDetail } = useJobDetail(jobId, connectionState === 'connected');
   const notifiedRef = useRef(false);
-  const startTimeRef = useRef(Date.now());
+  const onTerminalRef = useRef(onTerminal);
+  onTerminalRef.current = onTerminal;
 
   // Terminal status from job detail
   useEffect(() => {
     if (!jobDetail || notifiedRef.current) return;
     if (jobDetail.status === 'Completed') {
       notifiedRef.current = true;
-      onTerminal('completed');
+      onTerminalRef.current('completed');
     } else if (jobDetail.status === 'Failed') {
       notifiedRef.current = true;
-      onTerminal('failed');
+      onTerminalRef.current('failed');
     }
-  }, [jobDetail, onTerminal]);
+  }, [jobDetail]);
 
   // Timeout: if processing exceeds 5 minutes, treat as failed
   useEffect(() => {
@@ -136,20 +137,20 @@ function JobTracker({
     const timer = setTimeout(() => {
       if (!notifiedRef.current) {
         notifiedRef.current = true;
-        onTerminal('failed');
+        onTerminalRef.current('failed');
       }
     }, PROCESSING_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [onTerminal]);
+  }, []);
 
   // SSE connection error: if connection is in 'error' state, treat as failed
   useEffect(() => {
     if (notifiedRef.current) return;
     if (connectionState === 'error') {
       notifiedRef.current = true;
-      onTerminal('failed');
+      onTerminalRef.current('failed');
     }
-  }, [connectionState, onTerminal]);
+  }, [connectionState]);
 
   // Show pipeline steps from job detail
   const currentStep = jobDetail?.currentStep;
