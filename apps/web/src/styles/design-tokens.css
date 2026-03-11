@@ -74,7 +74,11 @@
     --card-rack-hover-width: 240px;
     --top-bar-height: 48px;
     --quick-view-width: 300px;
+    --quick-view-compact-width: 280px;
     --quick-view-collapsed-width: 44px;
+    --collapsed-panel-width: 44px;
+    --mobile-status-bar-height: 36px;
+    --mobile-scorebar-height: 52px;
 
     /* ============================================================================
      * TYPOGRAPHY SYSTEM
