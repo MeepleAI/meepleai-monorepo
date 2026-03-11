@@ -1,15 +1,15 @@
 /**
- * LayoutShell — Left Sidebar + Slim TopNavbar Layout
- * Issue #5035 — LayoutShell Component
+ * LayoutShell — CardRack + TopBar Layout ("Game Table" UX)
+ * Issue #5035 — LayoutShell Component (updated for Game Table redesign)
  *
- * Full-page shell with left sidebar navigation:
+ * Full-page shell with Card Rack sidebar navigation:
  *
  *   ┌────────────────────────────────────────────┐
- *   │ TopNavbar (sticky h-14, slim: logo+avatar) │
+ *   │ TopBar (sticky h-12, breadcrumb+⌘K+avatar)│
  *   ├──────┬─────────────────────────────────────┤
- *   │      │ MiniNav (h-10, context-aware)       │ ← auto-hides when no tabs
- *   │ Side ├─────────────────────────────────────┤
- *   │ bar  │                                     │
+ *   │ Card │ MiniNav (h-12, context-aware)       │ ← auto-hides when no tabs
+ *   │ Rack ├─────────────────────────────────────┤
+ *   │ 64px │                                     │
  *   │      │   Page Content (scrollable)         │
  *   │      │                                     │
  *   │      │   ┌───────────────────┐             │
@@ -19,10 +19,10 @@
  *
  * Responsibilities:
  * - Provides NavigationProvider so pages can call useSetNavConfig()
- * - Renders Sidebar (desktop-only, collapsible) + slim TopNavbar
- * - Renders MiniNav + FloatingActionBar offset by sidebar width
+ * - Renders CardRack (desktop-only, hover-expand 64→240px) + TopBar
+ * - Renders MiniNav + FloatingActionBar offset by CardRack width
  * - Preserves ImpersonationBanner and CardStackPanel
- * - Mobile: no sidebar, MobileNavDrawer via hamburger in TopNavbar
+ * - Mobile: no sidebar, MobileNavDrawer via hamburger in TopBar
  *
  * Usage:
  * ```tsx
@@ -42,17 +42,16 @@ import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-bann
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
 import { useBottomPadding } from '@/hooks/useBottomPadding';
-import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import { useImpersonationStore } from '@/store/impersonation';
 
+import { CardRack } from '../CardRack';
 import { FloatingActionBar } from '../FloatingActionBar';
 import { MiniNav } from '../MiniNav';
 import { MobileBreadcrumb } from '../MobileBreadcrumb';
 import { MobileTabBar } from '../MobileTabBar';
-import { Sidebar } from '../Sidebar/Sidebar';
 import { SmartFAB } from '../SmartFAB';
-import { TopNavbar } from '../TopNavbar';
+import { TopBar } from '../TopBar';
 
 // ─── LayoutShell ──────────────────────────────────────────────────────────────
 
@@ -86,7 +85,6 @@ export function LayoutShell({ children, fullWidth = false, className }: LayoutSh
 function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) {
   const { isImpersonating, impersonatedUser, isLoading, endImpersonation } =
     useImpersonationStore();
-  const { isCollapsed, toggle } = useSidebarState();
   const bottomPadding = useBottomPadding();
 
   return (
@@ -99,18 +97,18 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
         isLoading={isLoading}
       />
 
-      {/* ── Level 1: TopNavbar (slim: logo + notifications + user) ────────── */}
-      <TopNavbar />
+      {/* ── Level 1: TopBar (breadcrumb + ⌘K search + notifications + user) ── */}
+      <TopBar />
 
-      {/* ── Desktop Sidebar (hidden on mobile) ────────────────────────────── */}
-      <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />
+      {/* ── Desktop CardRack (hidden on mobile, hover-expand 64→240px) ──── */}
+      <CardRack />
 
-      {/* ── Content area (offset by sidebar width on desktop) ─────────────── */}
+      {/* ── Content area (offset by CardRack width on desktop) ────────────── */}
       <div
         className={cn(
           'flex flex-col flex-1',
           'transition-[margin] duration-200 ease-in-out',
-          isCollapsed ? 'md:ml-[60px]' : 'md:ml-[220px]'
+          'md:ml-[var(--card-rack-width,64px)]'
         )}
         data-testid="layout-content-area"
       >
