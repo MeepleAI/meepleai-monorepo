@@ -55,6 +55,7 @@ export { ActivityFeed } from './ActivityFeed';
 export { SimpleDiceRoller } from './SimpleDiceRoller';
 export { LiveSessionLayout } from './LiveSessionLayout';
 export { MobileStatusBar } from './MobileStatusBar';
+export { ActivityFeedInputBar } from './ActivityFeedInputBar';
 
 export type {
   Participant,
