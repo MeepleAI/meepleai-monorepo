@@ -53,6 +53,8 @@ export type { PauseSessionDialogProps } from './PauseSessionDialog';
 export { ActivityFeedEvent } from './ActivityFeedEvent';
 export { ActivityFeed } from './ActivityFeed';
 export { SimpleDiceRoller } from './SimpleDiceRoller';
+export { LiveSessionLayout } from './LiveSessionLayout';
+export { MobileStatusBar } from './MobileStatusBar';
 
 export type {
   Participant,
