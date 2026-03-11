@@ -93,7 +93,10 @@ function Parse-Manifest {
         secrets       = @{}
         service_map   = @{}
         stateful      = @()
-        server        = @{}
+        server        = @{
+            host = ''; user = ''; key_path = ''
+            remote_secrets_path = ''; compose_dir = ''; compose_cmd = ''
+        }
     }
 
     # Parse secrets section
@@ -130,7 +133,7 @@ function Parse-Manifest {
             elseif ($trimmed -match '^\s*compose_cmd:\s*>-?\s*$') { $inSection = 'server_compose_cmd' }
         }
         elseif ($inSection -eq 'server_compose_cmd') {
-            if ($trimmed -match '^\s+-f\s' -or $trimmed -match '^docker\s') {
+            if ($trimmed -match '^-f\s' -or $trimmed -match '^docker\s') {
                 if (-not $result.server.compose_cmd) {
                     $result.server.compose_cmd = $trimmed
                 } else {
@@ -152,7 +155,7 @@ function Parse-Manifest {
 # ── SSH helpers ────────────────────────────────────────────────────────────────
 function Get-SshArgs {
     param([hashtable]$Server)
-    $keyPath = $Server.key_path
+    $keyPath = "`"$($Server.key_path)`""
     return @(
         '-o', 'ConnectTimeout=5',
         '-o', 'BatchMode=yes',
@@ -164,7 +167,7 @@ function Get-SshArgs {
 
 function Get-ScpArgs {
     param([hashtable]$Server)
-    $keyPath = $Server.key_path
+    $keyPath = "`"$($Server.key_path)`""
     return @(
         '-o', 'ConnectTimeout=5',
         '-o', 'BatchMode=yes',
@@ -298,64 +301,50 @@ function Invoke-Pull {
 
     Write-Host "`nPulling secrets from server..." -ForegroundColor Cyan
 
-    # Download all *.secret files via tar
-    $tarRemote = "$($server.remote_secrets_path)"
-    $tarFile = Join-Path $TempRoot 'server-secrets.tar'
-    $extractDir = Join-Path $TempRoot 'server'
-    New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+    $remotePath = $server.remote_secrets_path
+    $downloadDir = Join-Path $TempRoot 'server'
+    New-Item -ItemType Directory -Path $downloadDir -Force | Out-Null
+
+    # List secret files on server
+    $listOutput = Invoke-Ssh $server "ls -1 $remotePath/*.secret 2>/dev/null | xargs -n1 basename"
+    if (-not $listOutput) {
+        Write-Host "ERROR: No secret files found on server" -ForegroundColor Red
+        Cleanup-Temp
+        exit 1
+    }
+    $remoteFiles = @($listOutput.Trim() -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
 
     if ($Only) {
-        $secretName = if ($Only.EndsWith('.secret')) { $Only } else { "$Only.secret" }
-        $remoteFile = "$tarRemote/$secretName"
-        $localTemp = Join-Path $extractDir $secretName
-        Write-Host "  Downloading $secretName..." -ForegroundColor Gray
-        if (-not $DryRun) {
-            $ok = Invoke-ScpDownload $server $remoteFile $localTemp
+        $filterName = if ($Only.EndsWith('.secret')) { $Only } else { "$Only.secret" }
+        $remoteFiles = @($remoteFiles | Where-Object { $_ -eq $filterName })
+    }
+
+    # Download each file via SCP
+    $failedDownloads = @()
+    if (-not $DryRun) {
+        foreach ($name in $remoteFiles) {
+            Write-Host "  Downloading $name..." -ForegroundColor Gray
+            $ok = Invoke-ScpDownload $server "$remotePath/$name" (Join-Path $downloadDir $name)
             if (-not $ok) {
-                Write-Host "ERROR: Failed to download $secretName" -ForegroundColor Red
-                Cleanup-Temp
-                exit 1
+                Write-Host "  WARNING: Failed to download $name, retrying..." -ForegroundColor Yellow
+                Start-Sleep -Milliseconds 500
+                $ok = Invoke-ScpDownload $server "$remotePath/$name" (Join-Path $downloadDir $name)
+                if (-not $ok) {
+                    Write-Host "  ERROR: Failed to download $name after retry" -ForegroundColor Red
+                    $failedDownloads += $name
+                }
             }
         }
-    } else {
-        Write-Host "  Downloading all secrets via tar..." -ForegroundColor Gray
-        if (-not $DryRun) {
-            $tarCmd = "cd $tarRemote && tar cf - *.secret 2>/dev/null"
-            $sshArgs = Get-SshArgs $server
-            # Use ssh + tar to download all secrets at once
-            $errFile = Join-Path $TempRoot 'tar-err.txt'
-            $proc = Start-Process -FilePath 'ssh' -ArgumentList ($sshArgs + @($tarCmd)) `
-                -NoNewWindow -Wait -PassThru `
-                -RedirectStandardOutput $tarFile `
-                -RedirectStandardError $errFile
-
-            if ($proc.ExitCode -ne 0 -or -not (Test-Path $tarFile) -or (Get-Item $tarFile).Length -eq 0) {
-                Write-Host "ERROR: Failed to download secrets from server" -ForegroundColor Red
-                Cleanup-Temp
-                exit 1
-            }
-
-            # Extract tar
-            tar -xf $tarFile -C $extractDir 2>$null
+        # Exclude failed downloads
+        if ($failedDownloads.Count -gt 0) {
+            $remoteFiles = @($remoteFiles | Where-Object { $_ -notin $failedDownloads })
         }
     }
 
     # Compare with local staging/
     $rows = @()
-    $serverFiles = if ($DryRun) {
-        # In dry-run, list from manifest
-        $manifest.secrets.Keys | Sort-Object
-    } else {
-        Get-ChildItem -Path $extractDir -Filter '*.secret' -ErrorAction SilentlyContinue | ForEach-Object { $_.Name } | Sort-Object
-    }
-
-    if ($Only) {
-        $filterName = if ($Only.EndsWith('.secret')) { $Only } else { "$Only.secret" }
-        $serverFiles = $serverFiles | Where-Object { $_ -eq $filterName }
-    }
-
-    foreach ($name in $serverFiles) {
-        $serverFile = Join-Path $extractDir $name
+    foreach ($name in ($remoteFiles | Sort-Object)) {
+        $serverFile = Join-Path $downloadDir $name
         $localFile = Join-Path $StagingDir $name
 
         if ($DryRun) {
@@ -378,7 +367,8 @@ function Invoke-Pull {
 
     Show-StatusTable $rows
 
-    $changedCount = ($rows | Where-Object { $_.Status -ne 'OK' }).Count
+    $changed = @($rows | Where-Object { $_.Status -ne 'OK' })
+    $changedCount = $changed.Count
     if ($changedCount -eq 0) {
         Write-Host "All secrets are up to date." -ForegroundColor Green
         Cleanup-Temp
@@ -401,9 +391,8 @@ function Invoke-Pull {
     New-Item -ItemType Directory -Path $StagingDir -Force | Out-Null
 
     # Copy changed/new files to staging
-    foreach ($row in $rows) {
-        if ($row.Status -eq 'OK') { continue }
-        $src = Join-Path $extractDir $row.Name
+    foreach ($row in $changed) {
+        $src = Join-Path $downloadDir $row.Name
         $dst = Join-Path $StagingDir $row.Name
         Copy-Item $src $dst -Force
         Write-Host "  Saved: $($row.Name)" -ForegroundColor Green
@@ -464,7 +453,7 @@ function Invoke-PushOrStatus {
         }
     }
 
-    if ($errors.Count -gt 0) {
+    if (@($errors).Count -gt 0) {
         Write-Host "`nWARNING: Some secrets have missing source files:" -ForegroundColor Yellow
         foreach ($err in $errors) {
             Write-Host "  $err" -ForegroundColor Yellow
@@ -472,7 +461,7 @@ function Invoke-PushOrStatus {
         Write-Host ""
     }
 
-    if ($secretSources.Count -eq 0) {
+    if (@($secretSources.Keys).Count -eq 0) {
         Write-Host "No secrets to process." -ForegroundColor Yellow
         Cleanup-Temp
         return
@@ -552,7 +541,7 @@ function Invoke-PushOrStatus {
     }
 
     # Push mode: continue with upload
-    if ($changedSecrets.Count -eq 0) {
+    if (@($changedSecrets).Count -eq 0) {
         Write-Host "All secrets are in sync. Nothing to push." -ForegroundColor Green
         Cleanup-Temp
         return
@@ -629,7 +618,7 @@ function Invoke-PushOrStatus {
         return
     }
 
-    if ($impactedServices.Count -eq 0) {
+    if (@($impactedServices).Count -eq 0) {
         Write-Host "`nNo services to restart." -ForegroundColor Green
         Cleanup-Temp
         return
