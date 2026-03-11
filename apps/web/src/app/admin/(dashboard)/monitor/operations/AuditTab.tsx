@@ -73,23 +73,28 @@ export function AuditTab() {
         resource: resourceFilter || undefined,
       });
 
+      let downloadBlob = blob;
+      let extension = format;
+
       if (format === 'json') {
-        // Convert CSV blob to JSON if needed — or download as-is
-        // For now, both download the backend's format
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.${format}`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        // Backend returns CSV — convert to JSON for JSON export
+        const csvText = await blob.text();
+        const lines = csvText.trim().split('\n');
+        const headers = lines[0]?.split(',').map(h => h.trim().replace(/^"|"$/g, '')) ?? [];
+        const rows = lines.slice(1).map(line => {
+          const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          return Object.fromEntries(headers.map((h, i) => [h, values[i] ?? '']));
+        });
+        downloadBlob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+        extension = 'json';
       }
+
+      const url = URL.createObjectURL(downloadBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.${extension}`;
+      a.click();
+      URL.revokeObjectURL(url);
       toast({ title: `Audit log exported as ${format.toUpperCase()}` });
     } catch {
       toast({ title: 'Export failed', variant: 'destructive' });
@@ -252,6 +257,9 @@ export function AuditTab() {
           <p className="text-xs text-muted-foreground">
             Showing {offset + 1}&ndash;{Math.min(offset + limit, data.totalCount)} of{' '}
             {data.totalCount}
+            {filteredEntries && filteredEntries.length !== data.entries.length && (
+              <span> ({filteredEntries.length} matching filters)</span>
+            )}
           </p>
           <div className="flex gap-2">
             <Button

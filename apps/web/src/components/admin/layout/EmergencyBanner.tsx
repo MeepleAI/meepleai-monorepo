@@ -16,16 +16,19 @@ import { api } from '@/lib/api';
 export function EmergencyBanner() {
   const [count, setCount] = useState(0);
   const [dismissed, setDismissed] = useState(false);
+  const [lastDismissedCount, setLastDismissedCount] = useState(0);
 
   const fetchCount = useCallback(async () => {
     try {
       const overrides = await api.admin.getActiveEmergencyOverrides();
-      setCount(overrides.length);
-      if (overrides.length > 0) setDismissed(false);
+      const newCount = overrides.length;
+      setCount(newCount);
+      // Only re-show if the count increased (new override added)
+      if (newCount > lastDismissedCount) setDismissed(false);
     } catch {
       // silent — banner is non-critical
     }
-  }, []);
+  }, [lastDismissedCount]);
 
   useEffect(() => {
     fetchCount();
@@ -53,7 +56,10 @@ export function EmergencyBanner() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => setDismissed(true)}
+        onClick={() => {
+          setDismissed(true);
+          setLastDismissedCount(count);
+        }}
         className="h-6 w-6 p-0 text-white hover:text-red-200 hover:bg-red-700"
         aria-label="Dismiss banner"
       >

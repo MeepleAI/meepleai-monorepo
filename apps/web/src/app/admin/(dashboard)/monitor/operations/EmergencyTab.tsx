@@ -54,8 +54,9 @@ export function EmergencyTab() {
   const [duration, setDuration] = useState(30);
   const [targetProvider, setTargetProvider] = useState('');
 
-  // Deactivation confirmation
+  // Confirmation dialogs
   const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null);
+  const [activateConfirmOpen, setActivateConfirmOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -248,7 +249,7 @@ export function EmergencyTab() {
 
             <div className="mt-4">
               <Button
-                onClick={handleActivate}
+                onClick={() => setActivateConfirmOpen(true)}
                 disabled={!reason.trim() || activating}
                 className="bg-red-600 hover:bg-red-700 text-white"
                 data-testid="activate-override-button"
@@ -260,6 +261,18 @@ export function EmergencyTab() {
           </div>
         </>
       )}
+
+      {/* Activate Confirmation — Level 2 (critical action) */}
+      <AdminConfirmationDialog
+        isOpen={activateConfirmOpen}
+        onClose={() => setActivateConfirmOpen(false)}
+        onConfirm={handleActivate}
+        level={AdminConfirmationLevel.Level2}
+        title="Activate Emergency Override"
+        message={`This will activate "${action}" override for ${duration} minutes. LLM routing will be immediately affected.`}
+        warningMessage="This is a critical action that affects production LLM traffic."
+        isLoading={activating}
+      />
 
       {/* Deactivate Confirmation — Level 1 */}
       <AdminConfirmationDialog

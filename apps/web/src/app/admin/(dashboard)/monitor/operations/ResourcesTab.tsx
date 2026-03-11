@@ -264,7 +264,7 @@ export function ResourcesTab() {
 
       {/* Top Tables (Sortable DataTable) */}
       {tables.length > 0 && (
-        <div>
+        <div className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-4">
           <h3 className="font-quicksand font-semibold text-sm mb-3">Top Tables by Size</h3>
           <DataTable
             columns={tableColumns}
