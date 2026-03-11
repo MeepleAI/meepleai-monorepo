@@ -40,14 +40,20 @@ class MockEventSource {
 // Setup
 // ============================================================================
 
+type AddEventFn = ReturnType<typeof useSessionStore.getState>['addEvent'];
+let originalAddEvent: AddEventFn;
+
 beforeEach(() => {
   MockEventSource.clear();
   vi.stubGlobal('EventSource', MockEventSource);
-  // Reset store
+  // Reset store and capture original addEvent
   useSessionStore.getState().reset();
+  originalAddEvent = useSessionStore.getState().addEvent;
 });
 
 afterEach(() => {
+  // Restore original addEvent if it was replaced by a test
+  useSessionStore.setState({ addEvent: originalAddEvent } as never);
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
@@ -71,12 +77,8 @@ describe('useSessionSSE', () => {
   });
 
   it('dispatches parsed events to store via addEvent', () => {
-    const addEventSpy = vi.spyOn(useSessionStore.getState(), 'addEvent');
-    // Re-bind after spy since Zustand getState() returns a snapshot
-    const store = useSessionStore;
-    const originalAddEvent = store.getState().addEvent;
     const mockAddEvent = vi.fn(originalAddEvent);
-    store.setState({ addEvent: mockAddEvent } as never);
+    useSessionStore.setState({ addEvent: mockAddEvent } as never);
 
     renderHook(() => useSessionSSE('session-123'));
 
@@ -106,8 +108,6 @@ describe('useSessionSSE', () => {
     expect(events).toHaveLength(1);
     expect(events[0].id).toBe('evt-1');
     expect(events[0].type).toBe('note');
-
-    addEventSpy.mockRestore();
   });
 
   it('deduplicates events with the same ID', () => {
@@ -193,25 +193,30 @@ describe('useSessionSSE', () => {
 
     const es = MockEventSource.instances[0];
 
-    // Trigger error
+    // Trigger error — sets disconnectedAt
     act(() => {
       es.onerror?.(new Event('error'));
     });
 
-    // Jump ahead past 5 minutes
-    vi.advanceTimersByTime(1000); // reconnect fires
+    // Advance past initial backoff to trigger reconnect
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
     expect(MockEventSource.instances).toHaveLength(2);
 
-    // Now simulate 5 minutes passing since disconnect
-    vi.setSystemTime(Date.now() + 5 * 60 * 1000);
+    // Advance system clock past the 5-minute threshold (5min + 1ms)
+    vi.setSystemTime(Date.now() + 5 * 60 * 1000 + 1);
 
+    // Error on the reconnected source
     const es2 = MockEventSource.instances[1];
     act(() => {
       es2.onerror?.(new Event('error'));
     });
 
-    // Should NOT schedule another reconnect
-    vi.advanceTimersByTime(60000);
+    // Should NOT schedule another reconnect — threshold exceeded
+    act(() => {
+      vi.advanceTimersByTime(60000);
+    });
     expect(MockEventSource.instances).toHaveLength(2); // no new instance
   });
 });

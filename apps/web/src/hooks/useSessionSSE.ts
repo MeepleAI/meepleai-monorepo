@@ -45,7 +45,7 @@ export function useSessionSSE(sessionId: string | null): void {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const backoffRef = useRef(INITIAL_BACKOFF_MS);
   const disconnectedAtRef = useRef<number | null>(null);
-  const isMountedRef = useRef(true);
+  const isMountedRef = useRef(false);
 
   const cleanup = useCallback(() => {
     if (eventSourceRef.current) {
@@ -113,7 +113,7 @@ export function useSessionSSE(sessionId: string | null): void {
 
         reconnectTimerRef.current = setTimeout(() => {
           if (isMountedRef.current) {
-            connect();
+            connectRef.current();
           }
         }, delay);
       };
@@ -122,8 +122,15 @@ export function useSessionSSE(sessionId: string | null): void {
     }
   }, [sessionId, cleanup]);
 
+  // Ref to avoid stale closure over connect in reconnect timers
+  const connectRef = useRef(connect);
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
   useEffect(() => {
     isMountedRef.current = true;
+    seenIdsRef.current = new Set(); // Clear dedup set on session change
 
     if (sessionId) {
       connect();

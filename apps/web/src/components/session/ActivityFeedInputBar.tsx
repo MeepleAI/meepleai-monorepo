@@ -37,7 +37,9 @@ export function ActivityFeedInputBar({
       timestamp: new Date().toISOString(),
     });
 
-    // Fire-and-forget POST — SSE will reconcile if needed
+    // Fire-and-forget POST — optimistic update already applied above.
+    // NOTE: When the real backend echoes this event via SSE, the server should
+    // use the client-provided UUID to avoid duplicates in the dedup set.
     fetch(`/api/v1/sessions/${sessionId}/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -54,7 +56,12 @@ export function ActivityFeedInputBar({
       <input
         value={text}
         onChange={e => setText(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && handleSend()}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
         placeholder="Scrivi una nota..."
         className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />
