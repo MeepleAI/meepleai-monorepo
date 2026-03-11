@@ -17,8 +17,16 @@ const TABS: { tab: TabType; label: string; icon: typeof BookOpen }[] = [
 ];
 
 export function QuickView() {
-  const { isOpen, isCollapsed, activeTab, selectedGameId, setActiveTab, close, toggleCollapsed } =
-    useQuickViewStore();
+  const {
+    isOpen,
+    isCollapsed,
+    activeTab,
+    selectedGameId,
+    mode,
+    setActiveTab,
+    close,
+    toggleCollapsed,
+  } = useQuickViewStore();
 
   if (!isOpen) return null;
 
@@ -48,6 +56,7 @@ export function QuickView() {
   return (
     <aside
       data-testid="quick-view"
+      data-mode={mode}
       className={cn(
         'hidden xl:flex flex-col',
         'w-[300px] border-l border-border bg-card',
