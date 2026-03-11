@@ -513,17 +513,38 @@ jobs:
             set -e
             cd /opt/meepleai
 
-            echo "🔄 Auto-rollback triggered — restoring previous images..."
+            echo "🔄 Auto-rollback triggered — finding previous working version..."
 
-            # Find the previous API image (second most recent, excluding current)
-            PREV_API=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'api:v' | head -2 | tail -1)
-            PREV_WEB=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'web:v' | head -2 | tail -1)
+            PREV_API=""
+            PREV_WEB=""
 
+            # Strategy 1: Read from DEPLOYMENT.json (written by successful deploys)
+            if [ -f /opt/meepleai/DEPLOYMENT.json ]; then
+              PREV_API=$(jq -r '.api_image // empty' /opt/meepleai/DEPLOYMENT.json 2>/dev/null || true)
+              PREV_WEB=$(jq -r '.web_image // empty' /opt/meepleai/DEPLOYMENT.json 2>/dev/null || true)
+              if [ -n "$PREV_API" ] && [ -n "$PREV_WEB" ]; then
+                echo "📋 Found previous version from DEPLOYMENT.json"
+              fi
+            fi
+
+            # Strategy 2: Fallback to GHCR image history
             if [ -z "$PREV_API" ] || [ -z "$PREV_WEB" ]; then
-              # Fallback: use the "latest" tag from before this deploy
-              echo "⚠️ Could not find previous versioned images, using last known good"
+              echo "⚠️ DEPLOYMENT.json not available, searching local images..."
+              PREV_API=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'api:(v|prod)' | head -2 | tail -1)
+              PREV_WEB=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'web:(v|prod)' | head -2 | tail -1)
+            fi
+
+            # Strategy 3: Last resort — use the *-latest tags
+            if [ -z "$PREV_API" ] || [ -z "$PREV_WEB" ]; then
+              echo "⚠️ No versioned images found, trying latest tags..."
               PREV_API=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'api:' | grep -v 'staging' | head -1)
               PREV_WEB=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'web:' | grep -v 'staging' | head -1)
+            fi
+
+            if [ -z "$PREV_API" ] || [ -z "$PREV_WEB" ]; then
+              echo "❌ CRITICAL: Cannot find ANY previous images for rollback!"
+              echo "Manual intervention required."
+              exit 1
             fi
 
             echo "Rolling back to: API=$PREV_API, WEB=$PREV_WEB"
