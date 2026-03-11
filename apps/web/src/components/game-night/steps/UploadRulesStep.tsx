@@ -3,15 +3,15 @@
 /**
  * UploadRulesStep — Step 2 of GameNightWizard.
  *
- * Shows CopyrightDisclaimerModal → then file upload → processing status.
+ * Shows CopyrightDisclaimerModal → then file upload via XHR → processing status.
  * Has "Salta" (skip) button to proceed without uploading a PDF.
  *
  * Issue #123 — Game Night Quick Start Wizard
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
-import { FileText, SkipForward } from 'lucide-react';
+import { FileText, Loader2, SkipForward } from 'lucide-react';
 
 import { PdfProcessingStatus } from '@/components/library/PdfProcessingStatus';
 import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
@@ -29,7 +29,9 @@ interface UploadRulesStepProps {
   onSkip: () => void;
 }
 
-type UploadPhase = 'prompt' | 'disclaimer' | 'upload' | 'processing';
+type UploadPhase = 'prompt' | 'disclaimer' | 'upload' | 'uploading' | 'processing';
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 // ============================================================================
 // Component
@@ -43,7 +45,10 @@ export function UploadRulesStep({
   onSkip,
 }: UploadRulesStepProps) {
   const [phase, setPhase] = useState<UploadPhase>('prompt');
-  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [pdfDocumentId, setPdfDocumentId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   const effectiveGameId = gameId ?? privateGameId ?? null;
 
@@ -55,21 +60,68 @@ export function UploadRulesStep({
     setPhase('prompt');
   }, []);
 
-  const handleFileSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    // Validate PDF
-    if (file.type !== 'application/pdf') return;
-    if (file.size > 50 * 1024 * 1024) return; // 50MB max
+      // Validate PDF
+      if (file.type !== 'application/pdf') {
+        setUploadError('Solo file PDF sono supportati.');
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setUploadError('Il file supera il limite di 50MB.');
+        return;
+      }
 
-    setUploadedFileName(file.name);
-    setPhase('processing');
+      setUploadError(null);
+      setPhase('uploading');
+      setUploadProgress(0);
 
-    // The actual upload is handled by the PdfProcessingStatus component's
-    // underlying infrastructure. For the wizard, we show the processing status
-    // and let the user continue when ready.
-  }, []);
+      const formData = new FormData();
+      formData.append('file', file);
+      if (effectiveGameId) {
+        formData.append('gameId', effectiveGameId);
+      }
+
+      const xhr = new XMLHttpRequest();
+      xhrRef.current = xhr;
+
+      xhr.upload.addEventListener('progress', ev => {
+        if (ev.lengthComputable) {
+          setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            setPdfDocumentId(response.documentId ?? response.id ?? null);
+            setPhase('processing');
+          } catch {
+            setUploadError('Risposta server non valida.');
+            setPhase('upload');
+          }
+        } else {
+          setUploadError(`Upload fallito (${xhr.status}). Riprova.`);
+          setPhase('upload');
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        setUploadError("Errore di rete durante l'upload.");
+        setPhase('upload');
+      });
+
+      // Use relative URL to route through Next.js proxy (avoids CORS)
+      xhr.open('POST', '/api/v1/ingest/pdf');
+      xhr.withCredentials = true;
+      xhr.send(formData);
+    },
+    [effectiveGameId]
+  );
 
   return (
     <div className="space-y-4" data-testid="upload-rules-step">
@@ -82,6 +134,12 @@ export function UploadRulesStep({
           l&apos;assistente AI.
         </p>
       </div>
+
+      {uploadError && (
+        <p className="text-sm text-destructive" data-testid="upload-error">
+          {uploadError}
+        </p>
+      )}
 
       {phase === 'prompt' && (
         <div className="space-y-3">
@@ -130,12 +188,29 @@ export function UploadRulesStep({
         </div>
       )}
 
+      {phase === 'uploading' && (
+        <div className="space-y-3" data-testid="upload-progress">
+          <div className="flex items-center gap-3 p-4 rounded-lg border">
+            <Loader2 className="h-5 w-5 animate-spin text-amber-600" aria-hidden="true" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">Upload in corso... {uploadProgress}%</p>
+              <div className="h-2 mt-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {phase === 'processing' && (
         <div className="space-y-3">
           <PdfProcessingStatus
             gameId={effectiveGameId}
-            pdfFileName={uploadedFileName}
-            onContinue={() => onComplete(effectiveGameId ?? undefined)}
+            pdfFileName={null}
+            onContinue={() => onComplete(pdfDocumentId ?? undefined)}
           />
         </div>
       )}

@@ -7,6 +7,7 @@ const mockBggSearch = vi.fn();
 const mockCreateSession = vi.fn();
 const mockAddPlayer = vi.fn();
 const mockStartSession = vi.fn();
+const mockPush = vi.fn();
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -25,7 +26,11 @@ vi.mock('@/lib/api', () => ({
 }));
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockPush }),
+}));
+
+vi.mock('next/image', () => ({
+  default: (props: Record<string, unknown>) => <img {...props} />,
 }));
 
 vi.mock('@/components/library/PdfProcessingStatus', () => ({
@@ -60,7 +65,7 @@ describe('GameNightWizard', () => {
     expect(screen.getByTestId('game-search-input')).toBeInTheDocument();
   });
 
-  it('searches catalog and shows results', async () => {
+  it('searches catalog via Enter key and shows results', async () => {
     const user = userEvent.setup();
     mockSearch.mockResolvedValue({
       items: [{ id: 'g1', title: 'Agricola', thumbnailUrl: '/thumb.jpg', yearPublished: 2007 }],
@@ -69,15 +74,11 @@ describe('GameNightWizard', () => {
 
     render(<GameNightWizard onComplete={onComplete} />);
 
-    await user.type(screen.getByTestId('game-search-input'), 'Agri');
-    await user.click(screen.getByRole('button', { name: '' })); // Search button (icon-only)
-
-    // Use keyboard enter instead
-    await user.clear(screen.getByTestId('game-search-input'));
     await user.type(screen.getByTestId('game-search-input'), 'Agricola{Enter}');
 
     await waitFor(() => {
-      expect(mockSearch).toHaveBeenCalled();
+      expect(mockSearch).toHaveBeenCalledTimes(1);
+      expect(mockSearch).toHaveBeenCalledWith(expect.objectContaining({ searchTerm: 'Agricola' }));
     });
 
     const results = await screen.findByTestId('game-search-results');
@@ -137,7 +138,9 @@ describe('GameNightWizard', () => {
     await user.click(screen.getByTestId('create-session-button'));
 
     await waitFor(() => {
-      expect(mockCreateSession).toHaveBeenCalledWith(expect.objectContaining({ gameId: 'g1' }));
+      expect(mockCreateSession).toHaveBeenCalledWith(
+        expect.objectContaining({ gameId: 'g1', gameName: 'Ticket to Ride' })
+      );
     });
 
     expect(mockAddPlayer).toHaveBeenCalledTimes(2);
@@ -167,5 +170,43 @@ describe('GameNightWizard', () => {
     // Add a player
     await user.click(screen.getByTestId('add-player-button'));
     expect(screen.getByTestId('player-input-2')).toBeInTheDocument();
+  });
+
+  it('creates session without gameId for BGG-only games', async () => {
+    const user = userEvent.setup();
+    // No catalog results → triggers BGG fallback
+    mockSearch.mockResolvedValue({ items: [], totalCount: 0 });
+    mockBggSearch.mockResolvedValue({
+      results: [{ bggId: 42, name: 'Everdell', thumbnailUrl: null, yearPublished: 2018 }],
+    });
+    mockCreateSession.mockResolvedValue('sess-bgg');
+    mockAddPlayer.mockResolvedValue(undefined);
+    mockStartSession.mockResolvedValue(undefined);
+
+    render(<GameNightWizard onComplete={onComplete} />);
+
+    // Search triggers BGG fallback
+    await user.type(screen.getByTestId('game-search-input'), 'Everdell{Enter}');
+    await waitFor(() => expect(screen.getByText('Everdell')).toBeInTheDocument());
+    await user.click(screen.getByText('Everdell'));
+
+    // Skip PDF upload
+    await user.click(screen.getByTestId('skip-rules-button'));
+
+    // Add players and create session
+    await user.type(screen.getByTestId('player-input-0'), 'Anna');
+    await user.type(screen.getByTestId('player-input-1'), 'Paolo');
+    await user.click(screen.getByTestId('create-session-button'));
+
+    await waitFor(() => {
+      // Should create with gameName only, no gameId
+      expect(mockCreateSession).toHaveBeenCalledWith(
+        expect.objectContaining({ gameName: 'Everdell' })
+      );
+      const callArg = mockCreateSession.mock.calls[0][0];
+      expect(callArg).not.toHaveProperty('gameId');
+    });
+
+    expect(onComplete).toHaveBeenCalledWith('sess-bgg');
   });
 });

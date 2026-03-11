@@ -8,7 +8,7 @@
  * Issue #123 — Game Night Quick Start Wizard
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 
 import { Loader2, Plus, Trash2, Users } from 'lucide-react';
 
@@ -22,9 +22,14 @@ import { cn } from '@/lib/utils';
 // ============================================================================
 
 interface CreateSessionStepProps {
-  gameId: string;
+  gameId?: string;
   gameTitle: string;
   onSessionCreated: (sessionId: string) => void;
+}
+
+interface PlayerSlot {
+  id: string;
+  name: string;
 }
 
 const PLAYER_COLORS = [
@@ -39,37 +44,43 @@ const PLAYER_COLORS = [
 ] as const;
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+let slotCounter = 0;
+function createSlot(name = ''): PlayerSlot {
+  return { id: `slot-${++slotCounter}`, name };
+}
+
+// ============================================================================
 // Component
 // ============================================================================
 
 export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: CreateSessionStepProps) {
-  const [players, setPlayers] = useState<string[]>(['', '']);
+  const formId = useId();
+  const [players, setPlayers] = useState<PlayerSlot[]>(() => [createSlot(), createSlot()]);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const canAddPlayer = players.length < 8;
   const canRemovePlayer = players.length > 2;
-  const validPlayers = players.filter(p => p.trim().length > 0);
+  const validPlayers = players.filter(p => p.name.trim().length > 0);
   const canCreate = validPlayers.length >= 2 && !isCreating;
 
-  const handlePlayerChange = useCallback((index: number, value: string) => {
-    setPlayers(prev => {
-      const next = [...prev];
-      next[index] = value;
-      return next;
-    });
+  const handlePlayerChange = useCallback((slotId: string, value: string) => {
+    setPlayers(prev => prev.map(p => (p.id === slotId ? { ...p, name: value } : p)));
   }, []);
 
   const handleAddPlayer = useCallback(() => {
     if (canAddPlayer) {
-      setPlayers(prev => [...prev, '']);
+      setPlayers(prev => [...prev, createSlot()]);
     }
   }, [canAddPlayer]);
 
   const handleRemovePlayer = useCallback(
-    (index: number) => {
+    (slotId: string) => {
       if (canRemovePlayer) {
-        setPlayers(prev => prev.filter((_, i) => i !== index));
+        setPlayers(prev => prev.filter(p => p.id !== slotId));
       }
     },
     [canRemovePlayer]
@@ -81,16 +92,16 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
     setError(null);
 
     try {
-      // Create session
+      // Create session — gameId is optional, gameName is always set
       const sessionId = await api.liveSessions.createSession({
-        gameId,
+        ...(gameId ? { gameId } : {}),
         gameName: gameTitle,
       });
 
       // Add players
       for (let i = 0; i < validPlayers.length; i++) {
         await api.liveSessions.addPlayer(sessionId, {
-          displayName: validPlayers[i],
+          displayName: validPlayers[i].name,
           color: PLAYER_COLORS[i % PLAYER_COLORS.length],
         });
       }
@@ -117,8 +128,8 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       </div>
 
       <div className="space-y-2">
-        {players.map((name, index) => (
-          <div key={index} className="flex items-center gap-2">
+        {players.map((player, index) => (
+          <div key={player.id} className="flex items-center gap-2">
             <div
               className="h-8 w-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-white"
               style={{
@@ -144,15 +155,16 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
             </div>
             <Input
               placeholder={`Giocatore ${index + 1}`}
-              value={name}
-              onChange={e => handlePlayerChange(index, e.target.value)}
+              value={player.name}
+              onChange={e => handlePlayerChange(player.id, e.target.value)}
               data-testid={`player-input-${index}`}
+              id={`${formId}-player-${index}`}
             />
             {canRemovePlayer && (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => handleRemovePlayer(index)}
+                onClick={() => handleRemovePlayer(player.id)}
                 className="flex-shrink-0 text-muted-foreground hover:text-destructive"
                 aria-label={`Rimuovi giocatore ${index + 1}`}
               >

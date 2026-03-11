@@ -24,6 +24,7 @@ describe('KbProcessingBanner', () => {
   it('transitions to ready state when KB is indexed', async () => {
     const onReady = vi.fn();
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ isReady: true }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -45,6 +46,7 @@ describe('KbProcessingBanner', () => {
 
   it('keeps polling when KB is not ready', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ isReady: false }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -65,5 +67,42 @@ describe('KbProcessingBanner', () => {
     });
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores non-ok responses and keeps polling', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    render(<KbProcessingBanner gameId="game-1" />);
+
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    // Still processing — did not crash
+    expect(screen.getByTestId('kb-banner-processing')).toBeInTheDocument();
+  });
+
+  it('shows timeout state after max poll attempts', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ isReady: false }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    render(<KbProcessingBanner gameId="game-1" />);
+
+    // Advance past max attempts (30 * 10s = 300s)
+    for (let i = 0; i < 31; i++) {
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+      });
+    }
+
+    expect(screen.getByTestId('kb-banner-timeout')).toBeInTheDocument();
+    expect(screen.getByText(/più tempo del previsto/i)).toBeInTheDocument();
   });
 });

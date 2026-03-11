@@ -13,8 +13,6 @@
 
 import { useCallback, useState } from 'react';
 
-import { useRouter } from 'next/navigation';
-
 import { WizardSteps } from '@/components/wizard/WizardSteps';
 
 import { CreateSessionStep } from './steps/CreateSessionStep';
@@ -36,6 +34,7 @@ interface WizardState {
   gameTitle?: string;
   privateGameId?: string;
   pdfId?: string;
+  bggId?: number;
 }
 
 const WIZARD_STEPS = [
@@ -51,10 +50,9 @@ const WIZARD_STEPS = [
 export function GameNightWizard({ onComplete }: GameNightWizardProps) {
   const [step, setStep] = useState<WizardStep>('search');
   const [state, setState] = useState<WizardState>({});
-  const router = useRouter();
 
   const handleGameFound = useCallback(
-    (data: { gameId?: string; privateGameId?: string; gameTitle: string }) => {
+    (data: { gameId?: string; privateGameId?: string; gameTitle: string; bggId?: number }) => {
       setState(prev => ({ ...prev, ...data }));
       setStep('upload');
     },
@@ -69,9 +67,8 @@ export function GameNightWizard({ onComplete }: GameNightWizardProps) {
   const handleSessionCreated = useCallback(
     (sessionId: string) => {
       onComplete(sessionId);
-      router.push(`/sessions/${sessionId}/play`);
     },
-    [onComplete, router]
+    [onComplete]
   );
 
   return (
@@ -92,7 +89,7 @@ export function GameNightWizard({ onComplete }: GameNightWizardProps) {
 
       {step === 'session' && (
         <CreateSessionStep
-          gameId={state.gameId ?? state.privateGameId ?? ''}
+          gameId={state.gameId}
           gameTitle={state.gameTitle ?? ''}
           onSessionCreated={handleSessionCreated}
         />

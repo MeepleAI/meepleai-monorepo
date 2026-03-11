@@ -9,9 +9,10 @@
  * Shows "Serata di Gioco" quick start option + existing 4-step wizard.
  */
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { PartyPopper } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { GameNightWizard } from '@/components/game-night/GameNightWizard';
 import { SessionCreationWizard } from '@/components/session/SessionCreationWizard';
@@ -19,6 +20,14 @@ import { Button } from '@/components/ui/primitives/button';
 
 export default function NewSessionPage() {
   const [showWizard, setShowWizard] = useState(false);
+  const router = useRouter();
+
+  const handleWizardComplete = useCallback(
+    (sessionId: string) => {
+      router.push(`/sessions/${sessionId}/play`);
+    },
+    [router]
+  );
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -54,7 +63,7 @@ export default function NewSessionPage() {
               Chiudi
             </Button>
           </div>
-          <GameNightWizard onComplete={() => setShowWizard(false)} />
+          <GameNightWizard onComplete={handleWizardComplete} />
         </div>
       )}
 

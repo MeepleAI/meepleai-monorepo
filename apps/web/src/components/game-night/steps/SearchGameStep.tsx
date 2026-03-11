@@ -12,6 +12,7 @@
 import { useCallback, useState } from 'react';
 
 import { Loader2, Search } from 'lucide-react';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -23,7 +24,12 @@ import { cn } from '@/lib/utils';
 // ============================================================================
 
 interface SearchGameStepProps {
-  onGameFound: (data: { gameId?: string; privateGameId?: string; gameTitle: string }) => void;
+  onGameFound: (data: {
+    gameId?: string;
+    privateGameId?: string;
+    gameTitle: string;
+    bggId?: number;
+  }) => void;
 }
 
 interface GameResult {
@@ -96,8 +102,8 @@ export function SearchGameStep({ onGameFound }: SearchGameStepProps) {
       if (result.source === 'catalog') {
         onGameFound({ gameId: result.id, gameTitle: result.title });
       } else {
-        // BGG game — will need to be added as private game
-        onGameFound({ gameTitle: result.title });
+        // BGG game — session will use gameName only (no gameId)
+        onGameFound({ gameTitle: result.title, bggId: Number(result.id) });
       }
     },
     [onGameFound]
@@ -130,7 +136,11 @@ export function SearchGameStep({ onGameFound }: SearchGameStepProps) {
           onKeyDown={handleKeyDown}
           data-testid="game-search-input"
         />
-        <Button onClick={handleSearch} disabled={isSearching || !query.trim()}>
+        <Button
+          onClick={handleSearch}
+          disabled={isSearching || !query.trim()}
+          aria-label={isSearching ? 'Ricerca in corso' : 'Cerca'}
+        >
           {isSearching ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
@@ -160,10 +170,12 @@ export function SearchGameStep({ onGameFound }: SearchGameStepProps) {
                 )}
               >
                 {result.thumbnailUrl ? (
-                  <img
+                  <Image
                     src={result.thumbnailUrl}
                     alt=""
-                    className="h-12 w-12 rounded object-cover flex-shrink-0"
+                    width={48}
+                    height={48}
+                    className="rounded object-cover flex-shrink-0"
                   />
                 ) : (
                   <div className="h-12 w-12 rounded bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
