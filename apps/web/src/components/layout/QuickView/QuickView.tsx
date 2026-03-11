@@ -5,6 +5,7 @@ import { BookOpen, HelpCircle, Bot, X, PanelRightClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuickViewStore, type QuickViewTab as TabType } from '@/store/quick-view';
 
+import { AIQuickViewContent } from './AIQuickViewContent';
 import { QuickViewTab } from './QuickViewTab';
 
 const TABS: { tab: TabType; label: string; icon: typeof BookOpen }[] = [
@@ -82,7 +83,7 @@ export function QuickView() {
         </div>
       </div>
 
-      {/* Tab content placeholder */}
+      {/* Tab content */}
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'rules' && (
           <p className="text-sm text-muted-foreground">Seleziona un gioco per vederne le regole</p>
@@ -90,7 +91,7 @@ export function QuickView() {
         {activeTab === 'faq' && (
           <p className="text-sm text-muted-foreground">Domande frequenti sul gioco</p>
         )}
-        {activeTab === 'ai' && <p className="text-sm text-muted-foreground">Chiedi all&apos;AI</p>}
+        {activeTab === 'ai' && <AIQuickViewContent gameId="" gameName="Gioco" />}
       </div>
     </aside>
   );

@@ -4,18 +4,18 @@
  *
  * Full-page shell with Card Rack sidebar navigation:
  *
- *   ┌────────────────────────────────────────────┐
- *   │ TopBar (sticky h-12, breadcrumb+⌘K+avatar)│
- *   ├──────┬─────────────────────────────────────┤
- *   │ Card │ MiniNav (h-12, context-aware)       │ ← auto-hides when no tabs
- *   │ Rack ├─────────────────────────────────────┤
- *   │ 64px │                                     │
- *   │      │   Page Content (scrollable)         │
- *   │      │                                     │
- *   │      │   ┌───────────────────┐             │
- *   │      │   │ FloatingActionBar │             │
- *   │      │   └───────────────────┘             │
- *   └──────┴─────────────────────────────────────┘
+ *   ┌──────────────────────────────────────────────────────────┐
+ *   │ TopBar (sticky h-12, breadcrumb+⌘K+avatar)              │
+ *   ├──────┬──────────────────────────────────┬────────────────┤
+ *   │ Card │ MiniNav (h-12, context-aware)    │ QuickView      │
+ *   │ Rack ├──────────────────────────────────┤ 300px, xl+     │
+ *   │ 64px │                                  │ rules/FAQ/AI   │
+ *   │      │   Page Content (scrollable)      │                │
+ *   │      │                                  │                │
+ *   │      │   ┌───────────────────┐          │                │
+ *   │      │   │ FloatingActionBar │          │                │
+ *   │      │   └───────────────────┘          │                │
+ *   └──────┴──────────────────────────────────┴────────────────┘
  *
  * Responsibilities:
  * - Provides NavigationProvider so pages can call useSetNavConfig()

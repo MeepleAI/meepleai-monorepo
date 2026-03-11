@@ -15,12 +15,14 @@ const STATUS_CONFIG: Record<GameNightStatus, { label: string; className: string 
   },
 };
 
+const DEFAULT_STATUS = { label: 'Sconosciuto', className: 'bg-muted text-muted-foreground border-border' };
+
 interface GameNightCardProps {
   night: GameNightSummary;
 }
 
 export function GameNightCard({ night }: GameNightCardProps) {
-  const status = STATUS_CONFIG[night.status];
+  const status = STATUS_CONFIG[night.status] ?? DEFAULT_STATUS;
   const dateStr = new Date(night.date).toLocaleDateString('it-IT', {
     weekday: 'short',
     day: 'numeric',

@@ -70,12 +70,15 @@ Uses Tailwind breakpoints from `design-tokens.css`:
 - **Accessibility**: Skip-to-content link (WCAG 2.4.1)
 - **Live mode variant** (future): Green tint, LIVE pulse, timer, turn, Pause/Stop buttons
 
-#### 3. Quick View (Right Side Panel) — NOT YET IMPLEMENTED
+#### 3. Quick View (Right Side Panel) — PARTIALLY IMPLEMENTED (PR #200)
 - **Width**: 300px (desktop), 280px (compact)
-- **Tabs**: Regole / FAQ / Chat (or AI in live sessions)
-- **Content**: Contextual — shows rules for selected game, AI chat during sessions
+- **Tabs**: Regole / FAQ / AI
+- **Context modes** (store needs `mode` discriminator):
+  - **Game context** (`mode: 'game'`): Rules/FAQ for `selectedGameId`, AI scoped to game KB
+  - **Session context** (`mode: 'session'`): Live session AI, session-specific quick prompts
 - **Collapsible**: Toggle to 44px strip with icon buttons
-- **Opens on**: Click on a game card in the table area
+- **Opens on**: Click on a game card (game mode) or auto-open during live sessions (session mode)
+- **Status**: Shell + store + tabs implemented. Content stubs for rules/FAQ. AIQuickViewContent wired but not connected to backend.
 
 #### 4. Inline Picker (Game Selection) — NOT YET IMPLEMENTED
 - **Trigger**: Click "+" on drop zone in Game Night planning
@@ -178,10 +181,81 @@ These components from Epic #5033 remain in LayoutShell and will be migrated or r
 | `/api/v1/game-nights/{id}/players` | GET/POST/DELETE | Manage players |
 | `/api/v1/game-nights/{id}/games` | GET/POST/DELETE | Manage selected games |
 | `/api/v1/game-nights/{id}/sessions` | POST | Start live session |
-| `/api/v1/game-nights/{id}/sessions/{sid}/events` | GET/POST/SSE | Activity feed |
+| `/api/v1/game-nights/{id}/sessions/{sid}/events` | GET/POST | Activity feed CRUD |
+| `/api/v1/game-nights/{id}/sessions/{sid}/events/stream` | GET (SSE) | Live event stream |
 | `/api/v1/game-nights/{id}/sessions/{sid}/scores` | GET/PATCH | Scoreboard |
 | `/api/v1/game-nights/{id}/sessions/{sid}/pause` | POST | Pause/resume |
 | `/api/v1/game-nights/{id}/ai/suggest` | POST | AI game suggestions |
+
+### API Contracts (Sprint 2 — Game Night CRUD)
+
+#### `GET /api/v1/game-nights`
+```json
+// Response 200
+{
+  "items": [{
+    "id": "uuid",
+    "title": "string",
+    "date": "2026-03-15T20:00:00Z",
+    "location": "string | null",
+    "status": "draft | upcoming | completed",
+    "playerCount": 4,
+    "gameCount": 2,
+    "playerAvatars": ["url1", "url2"],
+    "gameThumbnails": ["url1"],
+    "hostId": "uuid"
+  }],
+  "totalCount": 12,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+#### `POST /api/v1/game-nights`
+```json
+// Request
+{ "title": "string (required, 3-100 chars)", "date": "ISO 8601", "location": "string | null" }
+// Response 201
+{ "id": "uuid", "title": "...", "date": "...", "status": "draft", ... }
+// Error 422: Validation errors
+```
+
+#### `GET /api/v1/game-nights/{id}`
+```json
+// Response 200 — Full game night with players and games
+{
+  "id": "uuid", "title": "string", "date": "ISO 8601",
+  "location": "string | null", "status": "draft | upcoming | completed",
+  "players": [{ "id": "uuid", "name": "string", "avatarUrl": "string | null" }],
+  "games": [{ "id": "uuid", "title": "string", "thumbnailUrl": "string | null", "minPlayers": "int | null", "maxPlayers": "int | null" }],
+  "timeline": [{ "slotIndex": 0, "gameId": "uuid | null", "type": "game | break | free", "durationMinutes": 60 }]
+}
+// Error 404: GameNightNotFoundException
+```
+
+### SSE Operational Requirements
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| Retry backoff | 1s → 2s → 4s → 8s → 16s (max) | Exponential with cap to avoid thundering herd |
+| Max offline duration | 5 minutes | Beyond this, prompt full reload instead of replay |
+| Event replay on reconnect | Server sends missed events since `Last-Event-ID` | SSE spec built-in; requires server-side event log |
+| Max events/second (client) | 20 | Throttle renders via `requestAnimationFrame` batch |
+| Feed memory limit | Last 500 events in client state | Older events paginated from server on scroll-up |
+| Deduplication | By `event.id` (server-generated UUID) | Client maintains `Set<string>` of seen IDs |
+
+**Client reconnection behavior:**
+1. SSE connection drops → show "Riconnessione..." banner (yellow)
+2. Retry with exponential backoff: 1s, 2s, 4s, 8s, 16s
+3. On reconnect: send `Last-Event-ID` header → server replays missed events
+4. If offline > 5 minutes: show "Sessione scaduta — ricarica" with reload button
+5. During offline: queue local events (dice, notes) in `pendingEvents[]`, flush on reconnect
+
+**Conflict resolution for offline events:**
+- Server is authoritative for scores and turn state
+- Client-queued events get server timestamps on flush (not client timestamps)
+- Duplicate detection by idempotency key (`clientEventId` field)
+- Score conflicts: server rejects stale updates, client re-fetches current scores
 
 ### Activity Feed Event Types
 
@@ -262,16 +336,36 @@ These components from Epic #5033 remain in LayoutShell and will be migrated or r
 
 ## Implementation Status
 
-### Completed (S1 Phase 1)
+### Completed (S1 — PR #200)
 
-| Component | Commit | Files |
+| Component | Status | Notes |
 |-----------|--------|-------|
-| `breadcrumb-utils.ts` | `3f50a58a0` | `lib/breadcrumb-utils.ts`, tests |
-| `CardRack` | `f69bb7dae` | `CardRack.tsx`, `CardRackItem.tsx`, `useCardRackState.ts`, tests |
-| `TopBar` | `49f9cb264` | `TopBar.tsx` (UserMenu, SearchTrigger, skip-link), tests |
-| `LayoutShell` wiring | `9e948f72e` | Updated `LayoutShell.tsx`, replaced Sidebar/TopNavbar with CardRack/TopBar |
+| `breadcrumb-utils.ts` | Done | `lib/breadcrumb-utils.ts`, tests |
+| `CardRack` + `useCardRackState` | Done | Sidebar 64→240px hover, tests |
+| `TopBar` | Done | Breadcrumb, SearchTrigger, UserMenu, skip-link, tests |
+| `LayoutShell` wiring | Done | Replaced Sidebar/TopNavbar with CardRack/TopBar |
+| `useQuickViewStore` | Done | Store + tests |
+| `QuickView` shell | Done | 300px panel, 3 tabs, collapse, integrated in LayoutShell |
+| `useGameNightStore` | Done | Store + selectors + tests |
+| `useSessionStore` | Done | Store + selectors + tests |
+| Design tokens | Done | Card Rack + panel dimension CSS variables |
 
-### Remaining (S1 Phase 2+)
+### Scaffolded (S1 — PR #200, UI only, no backend integration)
+
+| Component | Status | Missing |
+|-----------|--------|---------|
+| `GameNightCard` | UI only | Backend: `GET /game-nights` |
+| `GameNightPlanningLayout` | UI only | Backend: `GET /game-nights/{id}`, real data fetching |
+| `InlineGamePicker` | UI only | Real collection data, backend integration |
+| `DealtGameCard` | UI only | Drag-and-drop, real game data |
+| `GameNightTimeline` | UI only | Timeline CRUD, backend sync |
+| `LiveSessionLayout` | UI only | SSE, real session data |
+| `ActivityFeed` + `ActivityFeedInputBar` | UI only | SSE stream, event creation API |
+| `MobileScorebar` + `MobileStatusBar` | UI only | Real session data |
+| `SimpleDiceRoller` | UI only | Auto-log to activity feed |
+| `AIQuickViewContent` | UI only | Backend AI endpoint, gameId scoping |
+
+### Remaining (S2+)
 
 | # | Item | Dependencies | Acceptance Criteria |
 |---|------|-------------|-------------------|
@@ -288,14 +382,136 @@ These components from Epic #5033 remain in LayoutShell and will be migrated or r
 
 **Dependency graph**: 3 → 4 → 5 → 7 (main chain); 1 → 4,5,6; 8 → 5,9; 9 → 5
 
+## Behavioral Examples (Specification by Example)
+
+### CardRack Active State
+
+```gherkin
+Scenario: CardRack highlights active nav item based on route
+  Given the user is on "/library/my-games"
+  Then the "Libreria" item has an orange active indicator
+  And all other items have default styling
+
+Scenario: CardRack matches nested routes
+  Given the user is on "/game-nights/abc-123/session"
+  Then the "Serate" item has an orange active indicator
+
+Scenario: CardRack hover expand timing
+  Given the CardRack is in collapsed state (64px)
+  When the user hovers over the CardRack
+  Then after 200ms the CardRack expands to 240px with labels
+  When the user moves the cursor away
+  Then after 300ms the CardRack collapses to 64px
+  When the user moves cursor away and back within 300ms
+  Then the collapse is cancelled and the CardRack stays expanded
+```
+
+### Inline Picker Filtering
+
+```gherkin
+Scenario: Picker filters games by player count
+  Given 3 players in the planning session
+  And the collection contains:
+    | Title      | MinPlayers | MaxPlayers |
+    | Catan      | 3          | 4          |
+    | Chess      | 2          | 2          |
+    | Party Game | 4          | 10         |
+    | Uno        | 2          | 10         |
+  When the InlineGamePicker opens
+  Then visible games are: "Catan", "Uno"
+  And hidden games are: "Chess" (max < 3), "Party Game" (min > 3)
+
+Scenario: Picker shows all games when no players added
+  Given 0 players in the planning session
+  When the InlineGamePicker opens
+  Then all games are visible (no player count filter applied)
+  And a hint reads "Aggiungi giocatori per filtrare"
+
+Scenario: Games with null player counts always visible
+  Given 3 players in the planning session
+  And game "Custom Game" has minPlayers=null, maxPlayers=null
+  When the InlineGamePicker opens
+  Then "Custom Game" is visible (null bypasses filter)
+```
+
+### Collapsible Panels
+
+```gherkin
+Scenario: Independent panel collapse on desktop
+  Given the viewport is >=1280px (wide)
+  And both left and right panels are open
+  When the user collapses the left panel
+  Then the left panel shrinks to 44px strip with mini-icons
+  And the content area expands to fill the freed space
+  And the right panel remains at 300px unchanged
+
+Scenario: Panel state on breakpoint change
+  Given the viewport is >=1280px with both panels open
+  When the viewport resizes to 768px (tablet)
+  Then the right panel is hidden entirely (not rendered)
+  And the left panel collapses to 64px (CardRack tablet mode)
+  When the viewport returns to >=1280px
+  Then panels restore their previous open/collapsed state
+```
+
+### QuickView Context Modes
+
+```gherkin
+Scenario: QuickView opens in game-context mode
+  Given no live session is active
+  When the user clicks a game card in the planning table
+  Then QuickView opens with selectedGameId set
+  And the "Regole" tab shows rules for that game
+  And the "AI" tab scopes queries to that game's knowledge base
+
+Scenario: QuickView in session-context mode
+  Given a live session is active for game "Catan"
+  When QuickView opens
+  Then selectedGameId is set to the current session's game
+  And the "AI" tab provides session-aware suggestions
+  And quick prompts include session-specific options ("Suggerisci strategia per il turno")
+```
+
 ## Testing Strategy
 
-- **Unit**: Each component isolated (CardRack, TopBar, QuickView, ActivityFeed, etc.)
-- **Integration**: LayoutShell renders correct layout based on route and breakpoint
-- **Responsive**: Tests at 4 breakpoints (≥1280px, 1024-1279px, 768-1023px, <768px)
-- **Accessibility**: WCAG 2.1 AA — keyboard nav through CardRack, focus management in bottom sheets, skip-link
-- **Visual**: Snapshot tests for collapsed/expanded states
-- **E2E**: Game Night creation → planning → live session flow (Playwright)
+### Unit Tests
+- Each component isolated (CardRack, TopBar, QuickView, ActivityFeed, etc.)
+- Store logic tested independently with `getInitialState()` reset
+
+### Integration Tests
+- LayoutShell renders correct layout based on route and breakpoint
+- QuickView integration with game/session context
+
+### Responsive Test Matrix
+
+| Component | Mobile (<768) | Tablet (768-1023) | Desktop (1024-1279) | Wide (>=1280) |
+|-----------|--------------|-------------------|--------------------|--------------|
+| CardRack | Hidden | Visible 64px, click-expand | Visible 64px, hover-expand | Same as desktop |
+| QuickView | Hidden (bottom sheet) | Hidden | Optional (toggle) | Open by default |
+| MiniNav | Visible | Visible | Visible | Visible |
+| MobileTabBar | Visible | Hidden | Hidden | Hidden |
+| FloatingActionBar | Visible | Visible | Visible | Visible |
+| Live panels | Bottom sheets | Single column | 3-col, collapsible | 3-col, both open |
+
+### Accessibility Scenarios (WCAG 2.1 AA)
+- **2.1.1 Keyboard**: Tab through all CardRack items, Enter/Space to activate
+- **2.4.1 Skip link**: Skip-to-content bypasses CardRack and TopBar
+- **4.1.3 Status messages**: Activity feed updates announced via `aria-live="polite"`
+- **Focus management**: Focus moves to QuickView content when opened, returns to trigger on close
+- **Bottom sheets**: Focus trapped inside when open, Escape to dismiss
+
+### E2E Scenarios (Playwright)
+1. **Game Night CRUD**: Create → appears in list → edit → delete
+2. **Planning flow**: Add players → pick games (filter verifies) → arrange timeline
+3. **Session start**: Start from planning → live layout renders → feed shows "Session start"
+4. **Session interaction**: Roll dice → score update → note → pause → resume
+5. **Session end**: End session → summary view → status becomes "completed"
+
+### Real-Time Testing
+- SSE reconnection: Simulate network drop → verify banner → verify replay on reconnect
+- Event ordering: Send 10 events rapidly → verify rendered in server timestamp order
+- Malformed event: Send invalid JSON → verify client doesn't crash, logs warning
+- Timer accuracy: Pause → wait 5s → resume → verify elapsed time ± 100ms
 
 ## References
 
