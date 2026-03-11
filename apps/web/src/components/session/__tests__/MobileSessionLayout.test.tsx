@@ -19,7 +19,7 @@ const defaultProps = {
 
 describe('MobileSessionLayout', () => {
   beforeEach(() => {
-    useSessionStore.setState(useSessionStore.getInitialState());
+    useSessionStore.getState().reset();
   });
 
   it('renders status bar with game name', () => {
