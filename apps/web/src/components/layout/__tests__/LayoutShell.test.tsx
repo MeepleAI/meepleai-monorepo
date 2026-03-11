@@ -77,6 +77,10 @@ vi.mock('@/components/layout/MobileTabBar', () => ({
   MobileTabBar: () => <div data-testid="mobile-tab-bar" />,
 }));
 
+vi.mock('@/components/layout/QuickView', () => ({
+  QuickView: () => <aside data-testid="quick-view" />,
+}));
+
 vi.mock('@/hooks/useBottomPadding', () => ({
   useBottomPadding: () => 'pb-24',
 }));
@@ -142,9 +146,16 @@ describe('LayoutShell', () => {
 
   it('renders content area wrapper with CardRack offset', () => {
     renderShell();
+    // The outer flex wrapper carries the CardRack offset margin
+    const shell = screen.getByTestId('layout-shell');
+    const outerWrapper = shell.querySelector('.md\\:ml-\\[var\\(--card-rack-width\\,64px\\)\\]');
+    expect(outerWrapper).toBeInTheDocument();
+  });
+
+  it('renders QuickView panel inside content area', () => {
+    render(<LayoutShell>Content</LayoutShell>);
     const contentArea = screen.getByTestId('layout-content-area');
     expect(contentArea).toBeInTheDocument();
-    expect(contentArea.className).toContain('md:ml-[var(--card-rack-width,64px)]');
   });
 
   it('does NOT render ImpersonationBanner when not impersonating', () => {

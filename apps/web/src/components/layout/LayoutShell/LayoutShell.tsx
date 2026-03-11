@@ -50,6 +50,7 @@ import { FloatingActionBar } from '../FloatingActionBar';
 import { MiniNav } from '../MiniNav';
 import { MobileBreadcrumb } from '../MobileBreadcrumb';
 import { MobileTabBar } from '../MobileTabBar';
+import { QuickView } from '../QuickView';
 import { SmartFAB } from '../SmartFAB';
 import { TopBar } from '../TopBar';
 
@@ -106,43 +107,47 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
       {/* ── Content area (offset by CardRack width on desktop) ────────────── */}
       <div
         className={cn(
-          'flex flex-col flex-1',
+          'flex flex-1',
           'transition-[margin] duration-200 ease-in-out',
           'md:ml-[var(--card-rack-width,64px)]'
         )}
-        data-testid="layout-content-area"
       >
-        {/* ── Level 2: MiniNav (auto-hides when no tabs) ─────────────────── */}
-        <Suspense>
-          <MiniNav />
-        </Suspense>
+        <div className="flex flex-col flex-1" data-testid="layout-content-area">
+          {/* ── Level 2: MiniNav (auto-hides when no tabs) ─────────────────── */}
+          <Suspense>
+            <MiniNav />
+          </Suspense>
 
-        {/* ── Mobile Breadcrumb (below MiniNav, mobile only) ───────────── */}
-        <MobileBreadcrumb />
+          {/* ── Mobile Breadcrumb (below MiniNav, mobile only) ───────────── */}
+          <MobileBreadcrumb />
 
-        {/* ── Main content ─────────────────────────────────────────────────── */}
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className={cn(
-            'flex-1',
-            // Horizontal padding unless fullWidth
-            !fullWidth && 'px-4 sm:px-6 lg:px-8',
-            // Dynamic bottom padding based on visible bottom bars
-            bottomPadding,
-            // Top spacing
-            'pt-4',
-            className
-          )}
-        >
-          {children}
-        </main>
+          {/* ── Main content ─────────────────────────────────────────────────── */}
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className={cn(
+              'flex-1',
+              // Horizontal padding unless fullWidth
+              !fullWidth && 'px-4 sm:px-6 lg:px-8',
+              // Dynamic bottom padding based on visible bottom bars
+              bottomPadding,
+              // Top spacing
+              'pt-4',
+              className
+            )}
+          >
+            {children}
+          </main>
 
-        {/* ── Level 3: FloatingActionBar (auto-hides when no actions) ───── */}
-        <FloatingActionBar />
+          {/* ── Level 3: FloatingActionBar (auto-hides when no actions) ───── */}
+          <FloatingActionBar />
 
-        {/* ── SmartFAB: context-aware primary action (mobile only) ────────── */}
-        <SmartFAB />
+          {/* ── SmartFAB: context-aware primary action (mobile only) ────────── */}
+          <SmartFAB />
+        </div>
+
+        {/* ── QuickView panel (rules / FAQ / AI, xl+ only) ─────────────────── */}
+        <QuickView />
       </div>
 
       {/* ── Level 0: MobileTabBar (persistent mobile navigation) ───────── */}
