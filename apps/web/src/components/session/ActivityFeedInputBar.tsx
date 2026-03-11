@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/store/session';
 
 interface ActivityFeedInputBarProps {
+  sessionId: string;
   playerId: string;
   playerName: string;
   onDiceClick?: () => void;
@@ -16,6 +17,7 @@ interface ActivityFeedInputBarProps {
 }
 
 export function ActivityFeedInputBar({
+  sessionId,
   playerId,
   playerName,
   onDiceClick,
@@ -34,6 +36,16 @@ export function ActivityFeedInputBar({
       data: { playerName, text: text.trim() },
       timestamp: new Date().toISOString(),
     });
+
+    // Fire-and-forget POST — SSE will reconcile if needed
+    fetch(`/api/v1/sessions/${sessionId}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'note', data: { playerName, text: text.trim() } }),
+    }).catch(() => {
+      // Silently ignore — optimistic update already applied
+    });
+
     setText('');
   };
 
