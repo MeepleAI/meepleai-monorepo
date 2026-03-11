@@ -20,7 +20,7 @@
  * Issue #5587 — Live Game Session UI
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
@@ -126,6 +126,16 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     };
   }, [sessionId, activeSession?.gameId]);
 
+  // ----- Refs -----
+  const chatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up chat timer on unmount
+  useEffect(() => {
+    return () => {
+      if (chatTimerRef.current) clearTimeout(chatTimerRef.current);
+    };
+  }, []);
+
   // ----- Local UI state -----
   const [rulesOpen, setRulesOpen] = useState(false);
   const [arbiterOpen, setArbiterOpen] = useState(false);
@@ -191,7 +201,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     // Simulate a placeholder response (actual integration with agent API
     // will be wired in a follow-up issue)
     setIsChatStreaming(true);
-    setTimeout(() => {
+    chatTimerRef.current = setTimeout(() => {
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -201,6 +211,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
       };
       setChatMessages(prev => [...prev, assistantMsg]);
       setIsChatStreaming(false);
+      chatTimerRef.current = null;
     }, 1200);
   }, []);
 
