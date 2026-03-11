@@ -49,3 +49,9 @@ export const useQuickViewStore = create<QuickViewState>()(
     { name: 'quick-view-store' }
   )
 );
+
+// Selectors
+export const selectIsOpen = (s: QuickViewState) => s.isOpen;
+export const selectSelectedGameId = (s: QuickViewState) => s.selectedGameId;
+export const selectActiveTab = (s: QuickViewState) => s.activeTab;
+export const selectIsCollapsed = (s: QuickViewState) => s.isCollapsed;

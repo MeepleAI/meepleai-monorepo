@@ -80,3 +80,12 @@ export const useGameNightStore = create<GameNightState>()(
     { name: 'game-night-store' }
   )
 );
+
+// Selectors
+export const selectGameNights = (s: GameNightState) => s.gameNights;
+export const selectSelectedId = (s: GameNightState) => s.selectedId;
+export const selectPlayers = (s: GameNightState) => s.players;
+export const selectSelectedGames = (s: GameNightState) => s.selectedGames;
+export const selectTimeline = (s: GameNightState) => s.timeline;
+export const selectIsLoading = (s: GameNightState) => s.isLoading;
+export const selectPlayerCount = (s: GameNightState) => s.players.length;
