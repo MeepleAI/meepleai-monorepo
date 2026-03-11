@@ -9,7 +9,7 @@
 
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense } from 'react';
 
 import { ChevronDown, LogOut, Search, Settings, User } from 'lucide-react';
 import Link from 'next/link';
@@ -19,13 +19,20 @@ import { DesktopBreadcrumb } from '@/components/layout/Breadcrumb/DesktopBreadcr
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer';
 import { Logo } from '@/components/layout/Navbar/Logo';
 import { NotificationBell } from '@/components/notifications';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/navigation/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useCommandPalette } from '@/hooks/useCommandPalette';
 import { useScrollState } from '@/hooks/useScrollState';
 import { cn } from '@/lib/utils';
 
-// ─── User Menu ────────────────────────────────────────────────────────────────
+// ─── User Menu (Radix DropdownMenu — WCAG keyboard nav built-in) ─────────────
 
 interface UserMenuProps {
   userName?: string;
@@ -33,18 +40,6 @@ interface UserMenuProps {
 }
 
 function UserMenu({ userName, userRole }: UserMenuProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
-
   const initials = userName
     ? userName
         .split(' ')
@@ -55,85 +50,69 @@ function UserMenu({ userName, userRole }: UserMenuProps) {
     : 'U';
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        aria-label="User menu"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className={cn(
-          'flex items-center gap-2 rounded-lg px-2 py-1.5',
-          'transition-colors duration-200',
-          'hover:bg-muted'
-        )}
-      >
-        <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center">
-          <span className="text-xs font-bold text-primary-foreground font-quicksand">
-            {initials}
-          </span>
-        </div>
-        <ChevronDown className="h-3 w-3 text-muted-foreground hidden sm:block" />
-      </button>
-
-      {open && (
-        <div
-          role="menu"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          aria-label="User menu"
           className={cn(
-            'absolute top-full right-0 mt-2 z-50',
-            'w-52 rounded-xl border border-border bg-card',
-            'shadow-lg shadow-black/10 p-1.5',
-            'animate-in fade-in-0 zoom-in-95 duration-150'
+            'flex items-center gap-2 rounded-lg px-2 py-1.5',
+            'transition-colors duration-200',
+            'hover:bg-muted'
           )}
         >
-          {/* User info */}
-          <div className="px-3 py-2 mb-1 border-b border-border">
-            <p className="text-sm font-semibold font-quicksand text-foreground truncate">
-              {userName ?? 'Utente'}
-            </p>
-            <p className="text-xs text-muted-foreground capitalize">{userRole ?? 'user'}</p>
+          <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center">
+            <span className="text-xs font-bold text-primary-foreground font-quicksand">
+              {initials}
+            </span>
           </div>
+          <ChevronDown className="h-3 w-3 text-muted-foreground hidden sm:block" />
+        </button>
+      </DropdownMenuTrigger>
 
-          <Link
-            href="/profile"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted transition-colors"
-          >
+      <DropdownMenuContent align="end" className="w-52 rounded-xl p-1.5">
+        {/* User info (non-interactive label) */}
+        <div className="px-3 py-2 mb-1">
+          <p className="text-sm font-semibold font-quicksand text-foreground truncate">
+            {userName ?? 'Utente'}
+          </p>
+          <p className="text-xs text-muted-foreground capitalize">{userRole ?? 'user'}</p>
+        </div>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem asChild>
+          <Link href="/profile" className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm">
             <User className="h-4 w-4" />
             Il mio profilo
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link
             href="/profile?tab=settings"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted transition-colors"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm"
           >
             <Settings className="h-4 w-4" />
             Impostazioni
           </Link>
+        </DropdownMenuItem>
 
-          <div className="my-1 border-t border-border" />
+        <DropdownMenuSeparator />
 
-          <div className="px-3 py-1">
-            <ThemeToggle showLabel size="sm" className="w-full justify-start" />
-          </div>
-
-          <div className="my-1 border-t border-border" />
-
-          <button
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              void logoutAction();
-            }}
-            className="flex w-full items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            Esci
-          </button>
+        <div className="px-3 py-1">
+          <ThemeToggle showLabel size="sm" className="w-full justify-start" />
         </div>
-      )}
-    </div>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          onClick={() => void logoutAction()}
+          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-destructive focus:text-destructive"
+        >
+          <LogOut className="h-4 w-4" />
+          Esci
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

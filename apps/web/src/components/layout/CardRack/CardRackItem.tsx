@@ -1,9 +1,10 @@
 'use client';
 
-import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
+
+import type { LucideIcon } from 'lucide-react';
 
 export interface CardRackItemProps {
   href: string;
@@ -26,6 +27,7 @@ export function CardRackItem({
     <Link
       href={href}
       aria-label={label}
+      aria-current={isActive ? 'page' : undefined}
       className={cn(
         'relative flex items-center rounded-lg',
         'min-h-[44px] transition-colors duration-150',
@@ -37,9 +39,7 @@ export function CardRackItem({
       )}
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      {isExpanded && (
-        <span className="text-sm font-medium truncate">{label}</span>
-      )}
+      {isExpanded && <span className="text-sm font-medium truncate">{label}</span>}
       {badge != null && (
         <span
           className={cn(

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const EXPAND_DELAY = 200;
 const COLLAPSE_DELAY = 300;
@@ -39,6 +39,11 @@ export function useCardRackState(): UseCardRackStateReturn {
     collapseTimer.current = setTimeout(() => {
       setIsExpanded(false);
     }, COLLAPSE_DELAY);
+  }, [clearTimers]);
+
+  // Clean up pending timers on unmount to prevent state updates after unmount
+  useEffect(() => {
+    return () => clearTimers();
   }, [clearTimers]);
 
   return { isExpanded, onMouseEnter, onMouseLeave, rackRef };
