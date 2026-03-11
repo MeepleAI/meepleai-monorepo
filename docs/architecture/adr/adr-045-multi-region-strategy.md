@@ -56,7 +56,7 @@ These implicit locality assumptions **will break** under multi-region deployment
 
 **MAU definition**: Monthly Active Users with >=1 AI interaction (chat, RAG query, agent invocation) — not just page views.
 
-**Cost estimate basis**: Hetzner (EU), Cloudflare (CDN), managed PostgreSQL pricing from major cloud providers as of 2026-03.
+**Cost estimate basis**: Hetzner (EU), Cloudflare (CDN), managed PostgreSQL pricing from major cloud providers as of 2026-03. Order-of-magnitude accuracy only.
 
 ### Per-Service Cost Breakdown
 
@@ -144,7 +144,7 @@ Significant infrastructure migration:
 
 Major architectural changes:
 
-- [ ] **Region detection** strategy implemented (see Section 5)
+- [ ] **Region detection** strategy implemented (see Section 6)
 - [ ] **G1**: `UserRegion` field in `LlmRoutingDecision` (already implemented — Issue #107)
 - [ ] **Region-aware routing** in `HybridLlmService` / `ILlmRoutingStrategy`
 - [ ] Cross-region PostgreSQL replication (or managed DB with read replicas per region)
@@ -512,9 +512,9 @@ Each phase must meet minimum service-level objectives before the next phase trig
 | **RPO** (data loss tolerance) | 24h (daily backup) | 24h | 1h (managed DB WAL) | <5min (streaming replication) | <1min |
 | **RTO** (recovery time) | 4h (manual restore) | 4h | 30min (K8s restart) | 5min (failover to other region) | <1min |
 | **CDN cache hit ratio** | N/A | >80% static | >80% | >85% | >90% |
-| **Cross-region latency** | N/A | N/A | N/A | <150ms (EU↔US) | <50ms (edge) |
+| **Cross-region latency** | N/A | N/A | N/A | <150ms (EU↔US) | <50ms (edge, reads only) |
 
-**Measurement**: All latency SLOs measured at application layer (not network). Availability measured as successful API responses / total requests (excluding planned maintenance).
+**Measurement**: All latency SLOs measured at application layer (not network). Availability measured as successful API responses / total requests (excluding planned maintenance). Phase 4 latency targets apply to read-only, edge-cached responses — write paths still route to EU primary and are bounded by Phase 3 targets.
 
 **Escalation**: If a phase fails to meet its SLO targets for >7 consecutive days under normal load, trigger investigation before considering next phase transition.
 
@@ -527,7 +527,7 @@ As the system scales beyond a single node, explicit consistency guarantees must 
 | Service | CAP Position | Consistency Model | Acceptable Staleness | Write Strategy |
 |---------|-------------|-------------------|---------------------|----------------|
 | **PostgreSQL** | CP (consistency + partition tolerance) | Strong consistency via primary writes | Read replicas: <1s lag target, <5s hard limit | All writes to primary region; reads from nearest replica |
-| **Qdrant** | AP (availability + partition tolerance) | Eventual consistency across regions | <10s for new vectors; stale search results acceptable for up to 30s | Writes to nearest region, async replication to others |
+| **Qdrant** | CP within single cluster (Raft consensus); AP when configured for cross-region replication | Eventual consistency across regions only | <10s for new vectors; stale search results acceptable for up to 30s | Writes to nearest region, async replication to others |
 | **Redis** | AP (availability preferred) | Eventual consistency acceptable | Rate limits: region-local (no cross-region sync needed) | Region-local writes; no cross-region replication |
 | **Ollama** | N/A (stateless inference) | N/A | N/A | Region-local; model version must match globally |
 | **Embedding service** | N/A (stateless inference) | N/A | N/A | Region-local; model version must match globally |
