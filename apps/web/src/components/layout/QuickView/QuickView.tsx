@@ -36,7 +36,7 @@ export function QuickView() {
         data-testid="quick-view"
         className="hidden xl:flex flex-col items-center w-[44px] border-l border-border bg-card"
       >
-        {TABS.map(({ tab, icon: Icon }) => (
+        {TABS.map(({ tab, label, icon: Icon }) => (
           <button
             key={tab}
             onClick={() => {
@@ -44,7 +44,7 @@ export function QuickView() {
               toggleCollapsed();
             }}
             className="p-2.5 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={tab}
+            aria-label={label}
           >
             <Icon className="h-4 w-4" />
           </button>

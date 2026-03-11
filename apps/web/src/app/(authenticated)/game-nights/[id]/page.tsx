@@ -49,6 +49,8 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
   // Sync accepted RSVPs and game IDs from the event into the planning store
   useEffect(() => {
     if (!isDraft || !event) return;
+    // Wait for catalog before resetting to avoid flicker on async arrival
+    if (event.gameIds.length > 0 && !catalogData) return;
     reset();
     // Populate players from accepted RSVPs
     if (rsvps) {
