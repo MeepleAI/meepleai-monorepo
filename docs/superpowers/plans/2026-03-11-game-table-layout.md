@@ -762,6 +762,29 @@ export function GameNightCard({ night }: GameNightCardProps) {
           </div>
         </div>
       </div>
+
+      {/* Player avatars */}
+      {night.playerAvatars.length > 0 && (
+        <div className="flex -space-x-2 mt-3" data-testid="player-avatars">
+          {night.playerAvatars.slice(0, 4).map((url, i) => (
+            <img key={i} src={url} alt="" className="h-6 w-6 rounded-full border-2 border-card" />
+          ))}
+          {night.playerAvatars.length > 4 && (
+            <span className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium border-2 border-card">
+              +{night.playerAvatars.length - 4}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Game thumbnails */}
+      {night.gameThumbnails.length > 0 && (
+        <div className="flex gap-1.5 mt-2" data-testid="game-thumbnails">
+          {night.gameThumbnails.slice(0, 3).map((url, i) => (
+            <img key={i} src={url} alt="" className="h-8 w-8 rounded-md object-cover" />
+          ))}
+        </div>
+      )}
     </Link>
   );
 }
@@ -1460,7 +1483,7 @@ describe('DiceRoller', () => {
 
   it('renders dice type selector', () => {
     render(<DiceRoller playerId="p1" playerName="Alice" />);
-    expect(screen.getByRole('combobox', { name: /tipo dadi/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/tipo dadi/i)).toBeInTheDocument();
   });
 
   it('shows roll button', () => {
@@ -1551,7 +1574,6 @@ export function DiceRoller({ playerId, playerName }: DiceRollerProps) {
           value={selectedType}
           onChange={(e) => setSelectedType(Number(e.target.value))}
           aria-label="Tipo dadi"
-          role="combobox"
           className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
         >
           {DICE_TYPES.map((dt, i) => (
@@ -1609,13 +1631,14 @@ git commit -m "feat(session): add DiceRoller with configurable dice types and au
 ### Task 11: CollapsiblePanel reusable component
 
 **Files:**
-- Create: `apps/web/src/components/ui/layout/CollapsiblePanel.tsx`
-- Test: `apps/web/src/components/ui/layout/__tests__/CollapsiblePanel.test.tsx`
+- Create: `apps/web/src/components/layout/CollapsiblePanel/CollapsiblePanel.tsx`
+- Create: `apps/web/src/components/layout/CollapsiblePanel/index.ts`
+- Test: `apps/web/src/components/layout/CollapsiblePanel/__tests__/CollapsiblePanel.test.tsx`
 
 - [ ] **Step 1: Write the failing test**
 
 ```tsx
-// apps/web/src/components/ui/layout/__tests__/CollapsiblePanel.test.tsx
+// apps/web/src/components/layout/CollapsiblePanel/__tests__/CollapsiblePanel.test.tsx
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -1671,7 +1694,7 @@ Expected: FAIL
 - [ ] **Step 3: Write implementation**
 
 ```tsx
-// apps/web/src/components/ui/layout/CollapsiblePanel.tsx
+// apps/web/src/components/layout/CollapsiblePanel/CollapsiblePanel.tsx
 'use client';
 
 import type { ReactNode } from 'react';
@@ -1704,10 +1727,10 @@ export function CollapsiblePanel({
       className={cn(
         'flex flex-col border-border bg-card transition-[width] duration-200',
         side === 'left' ? 'border-r' : 'border-l',
-        isCollapsed ? 'w-[44px]' : `w-[${width}]`,
+        isCollapsed && 'w-[44px]',
         className
       )}
-      style={isCollapsed ? undefined : { width }}
+      style={isCollapsed ? { width: '44px' } : { width }}
     >
       {isCollapsed ? (
         <button
@@ -1744,8 +1767,8 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/src/components/ui/layout/CollapsiblePanel.tsx apps/web/src/components/ui/layout/__tests__/
-git commit -m "feat(ui): add CollapsiblePanel with 44px collapsed strip"
+git add apps/web/src/components/layout/CollapsiblePanel/
+git commit -m "feat(layout): add CollapsiblePanel with 44px collapsed strip"
 ```
 
 ---
@@ -2000,9 +2023,10 @@ Expected: FAIL
 'use client';
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useCallback } from 'react';
 
-import { CollapsiblePanel } from '@/components/ui/layout/CollapsiblePanel';
+import { CollapsiblePanel } from '@/components/layout/CollapsiblePanel';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 interface LiveSessionLayoutProps {
   leftPanel: ReactNode;
@@ -2011,8 +2035,10 @@ interface LiveSessionLayoutProps {
 }
 
 export function LiveSessionLayout({ leftPanel, centerContent, rightPanel }: LiveSessionLayoutProps) {
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [leftCollapsed, setLeftCollapsed] = useLocalStorage('session-left-collapsed', false);
+  const [rightCollapsed, setRightCollapsed] = useLocalStorage('session-right-collapsed', false);
+  const toggleLeft = useCallback(() => setLeftCollapsed((v: boolean) => !v), [setLeftCollapsed]);
+  const toggleRight = useCallback(() => setRightCollapsed((v: boolean) => !v), [setRightCollapsed]);
 
   return (
     <div
@@ -2024,7 +2050,7 @@ export function LiveSessionLayout({ leftPanel, centerContent, rightPanel }: Live
         <CollapsiblePanel
           side="left"
           isCollapsed={leftCollapsed}
-          onToggle={() => setLeftCollapsed(!leftCollapsed)}
+          onToggle={toggleLeft}
           width="280px"
         >
           {leftPanel}
@@ -2041,7 +2067,7 @@ export function LiveSessionLayout({ leftPanel, centerContent, rightPanel }: Live
         <CollapsiblePanel
           side="right"
           isCollapsed={rightCollapsed}
-          onToggle={() => setRightCollapsed(!rightCollapsed)}
+          onToggle={toggleRight}
           width="280px"
         >
           {rightPanel}
@@ -2215,7 +2241,7 @@ git commit -m "feat(session): add MobileStatusBar with LIVE indicator and pause 
 
 - [ ] **Step 1: Run all new component tests**
 
-Run: `cd apps/web && pnpm vitest run src/store/ src/components/game-nights/ src/components/session/ src/components/layout/QuickView/ src/components/ui/layout/`
+Run: `cd apps/web && pnpm vitest run src/store/ src/components/game-nights/ src/components/session/ src/components/layout/QuickView/ src/components/layout/CollapsiblePanel/`
 Expected: All PASS
 
 - [ ] **Step 2: Run typecheck**
@@ -2283,6 +2309,1082 @@ EOF
 
 ```bash
 gh issue comment 148 --body "S1 Phase 2 implementation complete. PR created with Quick View, Game Night pages, Live Session layout, Activity Feed, Dice Roller, and Mobile Status Bar. See PR for details."
+```
+
+- [ ] **Step 4: Request code review**
+
+Dispatch `superpowers:code-reviewer` subagent on the PR.
+
+---
+
+## Chunk 8: Game Night Planning Page (Spec Item #4)
+
+### Task 18: DealtGameCard — rotated game card for table
+
+**Files:**
+- Create: `apps/web/src/components/game-nights/DealtGameCard.tsx`
+- Test: `apps/web/src/components/game-nights/__tests__/DealtGameCard.test.tsx`
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// apps/web/src/components/game-nights/__tests__/DealtGameCard.test.tsx
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+
+import { DealtGameCard } from '../DealtGameCard';
+
+describe('DealtGameCard', () => {
+  it('renders game title', () => {
+    render(<DealtGameCard game={{ id: 'g1', title: 'Catan' }} onRemove={vi.fn()} rotation={-2} />);
+    expect(screen.getByText('Catan')).toBeInTheDocument();
+  });
+
+  it('applies rotation transform', () => {
+    render(<DealtGameCard game={{ id: 'g1', title: 'Catan' }} onRemove={vi.fn()} rotation={-2} />);
+    const card = screen.getByTestId('dealt-card');
+    expect(card.style.transform).toContain('rotate(-2deg)');
+  });
+
+  it('calls onRemove when remove button clicked', async () => {
+    const onRemove = vi.fn();
+    const user = userEvent.setup();
+    render(<DealtGameCard game={{ id: 'g1', title: 'Catan' }} onRemove={onRemove} rotation={1} />);
+    await user.click(screen.getByRole('button', { name: /rimuovi/i }));
+    expect(onRemove).toHaveBeenCalledWith('g1');
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd apps/web && pnpm vitest run src/components/game-nights/__tests__/DealtGameCard.test.tsx`
+Expected: FAIL
+
+- [ ] **Step 3: Write implementation**
+
+```tsx
+// apps/web/src/components/game-nights/DealtGameCard.tsx
+'use client';
+
+import { X, Gamepad2 } from 'lucide-react';
+import type { GameNightGame } from '@/store/game-night';
+import { cn } from '@/lib/utils';
+
+interface DealtGameCardProps {
+  game: GameNightGame;
+  onRemove: (gameId: string) => void;
+  rotation: number;
+}
+
+export function DealtGameCard({ game, onRemove, rotation }: DealtGameCardProps) {
+  return (
+    <div
+      data-testid="dealt-card"
+      style={{ transform: `rotate(${rotation}deg)` }}
+      className={cn(
+        'relative group w-[140px] rounded-xl border border-border bg-card p-3',
+        'shadow-sm hover:shadow-md transition-shadow duration-200'
+      )}
+    >
+      <button
+        onClick={() => onRemove(game.id)}
+        aria-label={`Rimuovi ${game.title}`}
+        className={cn(
+          'absolute -top-2 -right-2 h-6 w-6 rounded-full',
+          'bg-destructive text-destructive-foreground',
+          'flex items-center justify-center',
+          'opacity-0 group-hover:opacity-100 transition-opacity'
+        )}
+      >
+        <X className="h-3 w-3" />
+      </button>
+      <div className="h-16 w-full rounded-lg bg-muted flex items-center justify-center mb-2">
+        {game.thumbnailUrl ? (
+          <img src={game.thumbnailUrl} alt={game.title} className="h-full w-full rounded-lg object-cover" />
+        ) : (
+          <Gamepad2 className="h-6 w-6 text-muted-foreground" />
+        )}
+      </div>
+      <p className="text-xs font-medium text-center truncate">{game.title}</p>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd apps/web && pnpm vitest run src/components/game-nights/__tests__/DealtGameCard.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/components/game-nights/DealtGameCard.tsx apps/web/src/components/game-nights/__tests__/DealtGameCard.test.tsx
+git commit -m "feat(game-nights): add DealtGameCard with rotation transform"
+```
+
+---
+
+### Task 19: GameNightTimeline — horizontal timeline bar
+
+**Files:**
+- Create: `apps/web/src/components/game-nights/GameNightTimeline.tsx`
+- Test: `apps/web/src/components/game-nights/__tests__/GameNightTimeline.test.tsx`
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// apps/web/src/components/game-nights/__tests__/GameNightTimeline.test.tsx
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+
+import { GameNightTimeline } from '../GameNightTimeline';
+import type { TimelineSlot } from '@/store/game-night';
+
+const slots: TimelineSlot[] = [
+  { id: '1', type: 'game', gameId: 'g1', durationMinutes: 60 },
+  { id: '2', type: 'break', durationMinutes: 15 },
+  { id: '3', type: 'free', durationMinutes: 30 },
+];
+
+describe('GameNightTimeline', () => {
+  it('renders all timeline slots', () => {
+    render(<GameNightTimeline slots={slots} />);
+    expect(screen.getByTestId('timeline')).toBeInTheDocument();
+    expect(screen.getAllByTestId('timeline-slot')).toHaveLength(3);
+  });
+
+  it('shows game slot with game label', () => {
+    render(<GameNightTimeline slots={slots} gameNames={{ g1: 'Catan' }} />);
+    expect(screen.getByText('Catan')).toBeInTheDocument();
+  });
+
+  it('shows break label', () => {
+    render(<GameNightTimeline slots={slots} />);
+    expect(screen.getByText(/pausa/i)).toBeInTheDocument();
+  });
+
+  it('shows duration for each slot', () => {
+    render(<GameNightTimeline slots={slots} />);
+    expect(screen.getByText(/60min/i)).toBeInTheDocument();
+    expect(screen.getByText(/15min/i)).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd apps/web && pnpm vitest run src/components/game-nights/__tests__/GameNightTimeline.test.tsx`
+Expected: FAIL
+
+- [ ] **Step 3: Write implementation**
+
+```tsx
+// apps/web/src/components/game-nights/GameNightTimeline.tsx
+'use client';
+
+import { Gamepad2, Coffee, Clock } from 'lucide-react';
+import type { TimelineSlot } from '@/store/game-night';
+import { cn } from '@/lib/utils';
+
+const SLOT_CONFIG = {
+  game: { icon: Gamepad2, bg: 'bg-primary/10 border-primary/20', label: 'Gioco' },
+  break: { icon: Coffee, bg: 'bg-yellow-500/10 border-yellow-500/20', label: 'Pausa' },
+  free: { icon: Clock, bg: 'bg-muted border-border', label: 'Libero' },
+} as const;
+
+interface GameNightTimelineProps {
+  slots: TimelineSlot[];
+  gameNames?: Record<string, string>;
+}
+
+export function GameNightTimeline({ slots, gameNames = {} }: GameNightTimelineProps) {
+  const total = slots.reduce((sum, s) => sum + s.durationMinutes, 0);
+
+  return (
+    <div data-testid="timeline" className="flex gap-1 h-10 rounded-lg overflow-hidden border border-border">
+      {slots.map((slot) => {
+        const config = SLOT_CONFIG[slot.type];
+        const Icon = config.icon;
+        const width = total > 0 ? (slot.durationMinutes / total) * 100 : 0;
+        const label = slot.type === 'game' && slot.gameId ? (gameNames[slot.gameId] ?? config.label) : config.label;
+
+        return (
+          <div
+            key={slot.id}
+            data-testid="timeline-slot"
+            style={{ width: `${width}%` }}
+            className={cn('flex items-center gap-1 px-2 border', config.bg, 'min-w-0')}
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-xs font-medium truncate">{label}</span>
+            <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{slot.durationMinutes}min</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd apps/web && pnpm vitest run src/components/game-nights/__tests__/GameNightTimeline.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/components/game-nights/GameNightTimeline.tsx apps/web/src/components/game-nights/__tests__/GameNightTimeline.test.tsx
+git commit -m "feat(game-nights): add GameNightTimeline horizontal bar"
+```
+
+---
+
+### Task 20: GameNightPlanningLayout — two-column planning page
+
+**Files:**
+- Create: `apps/web/src/components/game-nights/GameNightPlanningLayout.tsx`
+- Create: `apps/web/src/app/(authenticated)/game-nights/[id]/page.tsx`
+- Test: `apps/web/src/components/game-nights/__tests__/GameNightPlanningLayout.test.tsx`
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// apps/web/src/components/game-nights/__tests__/GameNightPlanningLayout.test.tsx
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+
+import { useGameNightStore } from '@/store/game-night';
+import { GameNightPlanningLayout } from '../GameNightPlanningLayout';
+
+vi.mock('next/link', () => ({
+  default: ({ children, href, ...props }: any) => <a href={href} {...props}>{children}</a>,
+}));
+
+describe('GameNightPlanningLayout', () => {
+  beforeEach(() => {
+    useGameNightStore.setState(useGameNightStore.getInitialState());
+  });
+
+  it('renders two-column layout', () => {
+    render(<GameNightPlanningLayout title="Friday Night" />);
+    expect(screen.getByTestId('planning-layout')).toBeInTheDocument();
+  });
+
+  it('shows planning title', () => {
+    render(<GameNightPlanningLayout title="Friday Night" />);
+    expect(screen.getByText('Friday Night')).toBeInTheDocument();
+  });
+
+  it('shows dealt cards area', () => {
+    render(<GameNightPlanningLayout title="Test" />);
+    expect(screen.getByTestId('dealt-cards-area')).toBeInTheDocument();
+  });
+
+  it('shows empty drop zone when no games selected', () => {
+    render(<GameNightPlanningLayout title="Test" />);
+    expect(screen.getByText(/aggiungi giochi/i)).toBeInTheDocument();
+  });
+
+  it('shows player section', () => {
+    render(<GameNightPlanningLayout title="Test" />);
+    expect(screen.getByText(/giocatori/i)).toBeInTheDocument();
+  });
+
+  it('shows timeline section', () => {
+    render(<GameNightPlanningLayout title="Test" />);
+    expect(screen.getByText(/programma/i)).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd apps/web && pnpm vitest run src/components/game-nights/__tests__/GameNightPlanningLayout.test.tsx`
+Expected: FAIL
+
+- [ ] **Step 3: Write implementation**
+
+```tsx
+// apps/web/src/components/game-nights/GameNightPlanningLayout.tsx
+'use client';
+
+import { Plus, Users } from 'lucide-react';
+import { useState } from 'react';
+
+import { useGameNightStore } from '@/store/game-night';
+import { cn } from '@/lib/utils';
+
+import { DealtGameCard } from './DealtGameCard';
+import { GameNightTimeline } from './GameNightTimeline';
+import { InlineGamePicker } from './InlineGamePicker';
+
+const ROTATIONS = [-2, 1, -1, 2, -0.5, 1.5];
+
+interface GameNightPlanningLayoutProps {
+  title: string;
+  availableGames?: Array<{ id: string; title: string; thumbnailUrl?: string; minPlayers?: number; maxPlayers?: number }>;
+}
+
+export function GameNightPlanningLayout({ title, availableGames = [] }: GameNightPlanningLayoutProps) {
+  const { players, selectedGames, timeline, removeGame, addGame } = useGameNightStore();
+  const [showPicker, setShowPicker] = useState(false);
+
+  return (
+    <div data-testid="planning-layout" className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+      {/* Left column — info, players, AI suggestion */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-bold font-quicksand">{title}</h2>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            <Users className="inline h-4 w-4 mr-1.5" />
+            Giocatori ({players.length})
+          </h3>
+          {players.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Invita giocatori per iniziare</p>
+          ) : (
+            <div className="space-y-2">
+              {players.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 text-sm">
+                  <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold">
+                    {p.name[0]}
+                  </div>
+                  <span>{p.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right column — table, picker, timeline */}
+      <div className="space-y-6">
+        {/* Dealt cards area */}
+        <div data-testid="dealt-cards-area">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Sul Tavolo ({selectedGames.length})
+          </h3>
+          {selectedGames.length === 0 ? (
+            <button
+              onClick={() => setShowPicker(true)}
+              className={cn(
+                'w-full h-32 rounded-xl border-2 border-dashed border-border',
+                'flex flex-col items-center justify-center gap-2',
+                'text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors'
+              )}
+            >
+              <Plus className="h-6 w-6" />
+              <span className="text-sm">Aggiungi giochi al tavolo</span>
+            </button>
+          ) : (
+            <div className="flex flex-wrap gap-4 p-4 rounded-xl bg-muted/30 border border-border min-h-[120px]">
+              {selectedGames.map((game, i) => (
+                <DealtGameCard
+                  key={game.id}
+                  game={game}
+                  onRemove={removeGame}
+                  rotation={ROTATIONS[i % ROTATIONS.length]}
+                />
+              ))}
+              <button
+                onClick={() => setShowPicker(true)}
+                className="w-[140px] h-[120px] rounded-xl border-2 border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-primary/30 transition-colors"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Inline picker */}
+        {showPicker && (
+          <InlineGamePicker
+            games={availableGames}
+            onSelect={(game) => { addGame(game); setShowPicker(false); }}
+            playerCount={players.length || undefined}
+            excludeIds={selectedGames.map((g) => g.id)}
+          />
+        )}
+
+        {/* Timeline */}
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Programma
+          </h3>
+          {timeline.length > 0 ? (
+            <GameNightTimeline slots={timeline} />
+          ) : (
+            <p className="text-sm text-muted-foreground">Il programma verrà generato automaticamente</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx
+// apps/web/src/app/(authenticated)/game-nights/[id]/page.tsx
+import { GameNightPlanningLayout } from '@/components/game-nights/GameNightPlanningLayout';
+
+interface Props {
+  params: Promise<{ id: string }>;
+}
+
+export default async function GameNightDetailPage({ params }: Props) {
+  const { id } = await params;
+  // TODO: fetch game night data via React Query when backend exists
+  return (
+    <div className="space-y-6">
+      <GameNightPlanningLayout title={`Serata ${id}`} />
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd apps/web && pnpm vitest run src/components/game-nights/__tests__/GameNightPlanningLayout.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/components/game-nights/ apps/web/src/app/\(authenticated\)/game-nights/
+git commit -m "feat(game-nights): add planning page with dealt cards, timeline, inline picker"
+```
+
+---
+
+## Chunk 9: AI Integration (Spec Item #10)
+
+### Task 21: AIQuickViewContent — AI tab content for Quick View
+
+**Files:**
+- Create: `apps/web/src/components/layout/QuickView/AIQuickViewContent.tsx`
+- Test: `apps/web/src/components/layout/QuickView/__tests__/AIQuickViewContent.test.tsx`
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// apps/web/src/components/layout/QuickView/__tests__/AIQuickViewContent.test.tsx
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+
+import { AIQuickViewContent } from '../AIQuickViewContent';
+
+describe('AIQuickViewContent', () => {
+  it('renders quick prompt buttons', () => {
+    render(<AIQuickViewContent gameId="g1" gameName="Catan" />);
+    expect(screen.getByText(/spiega le regole/i)).toBeInTheDocument();
+    expect(screen.getByText(/strategia/i)).toBeInTheDocument();
+  });
+
+  it('renders message input', () => {
+    render(<AIQuickViewContent gameId="g1" gameName="Catan" />);
+    expect(screen.getByPlaceholderText(/chiedi/i)).toBeInTheDocument();
+  });
+
+  it('sends message on submit', async () => {
+    const user = userEvent.setup();
+    render(<AIQuickViewContent gameId="g1" gameName="Catan" />);
+    const input = screen.getByPlaceholderText(/chiedi/i);
+    await user.type(input, 'Come si vince?');
+    await user.click(screen.getByRole('button', { name: /invia/i }));
+    // Input should clear after send
+    expect(input).toHaveValue('');
+  });
+
+  it('shows game name in context label', () => {
+    render(<AIQuickViewContent gameId="g1" gameName="Catan" />);
+    expect(screen.getByText(/catan/i)).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd apps/web && pnpm vitest run src/components/layout/QuickView/__tests__/AIQuickViewContent.test.tsx`
+Expected: FAIL
+
+- [ ] **Step 3: Write implementation**
+
+```tsx
+// apps/web/src/components/layout/QuickView/AIQuickViewContent.tsx
+'use client';
+
+import { useState } from 'react';
+import { Bot, Send } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const QUICK_PROMPTS = [
+  'Spiega le regole base',
+  'Suggerisci una strategia',
+  'Regole per principianti',
+  'Domande frequenti',
+];
+
+interface AIQuickViewContentProps {
+  gameId: string;
+  gameName: string;
+}
+
+export function AIQuickViewContent({ gameId, gameName }: AIQuickViewContentProps) {
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([]);
+
+  const handleSend = (text: string) => {
+    if (!text.trim()) return;
+    setMessages((prev) => [...prev, { role: 'user', text }]);
+    setInput('');
+    // TODO: integrate with useAgentChatStream when agent endpoint exists
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Context label */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+        <Bot className="h-4 w-4 text-purple-500" />
+        <span className="text-xs font-medium text-muted-foreground">
+          AI assistente — {gameName}
+        </span>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {messages.length === 0 && (
+          <div className="text-center py-6">
+            <Bot className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+            <p className="text-sm text-muted-foreground">Chiedi qualcosa su {gameName}</p>
+          </div>
+        )}
+        {messages.map((msg, i) => (
+          <div key={i} className={cn('text-sm rounded-lg px-3 py-2', msg.role === 'user' ? 'bg-primary/10 ml-6' : 'bg-muted mr-6')}>
+            {msg.text}
+          </div>
+        ))}
+      </div>
+
+      {/* Quick prompts */}
+      <div className="flex flex-wrap gap-1.5 px-3 py-2 border-t border-border">
+        {QUICK_PROMPTS.map((prompt) => (
+          <button
+            key={prompt}
+            onClick={() => handleSend(prompt)}
+            className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+
+      {/* Input */}
+      <div className="flex items-center gap-2 px-3 py-2 border-t border-border">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSend(input)}
+          placeholder="Chiedi all'AI..."
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+        <button
+          onClick={() => handleSend(input)}
+          aria-label="Invia messaggio"
+          className="p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors"
+        >
+          <Send className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd apps/web && pnpm vitest run src/components/layout/QuickView/__tests__/AIQuickViewContent.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Wire into QuickView and commit**
+
+Update `QuickView.tsx` to render `AIQuickViewContent` when `activeTab === 'ai'` and a game is selected (pass `selectedGameId` and game name).
+
+```bash
+git add apps/web/src/components/layout/QuickView/
+git commit -m "feat(ai): add AIQuickViewContent with quick prompts and chat input"
+```
+
+---
+
+### Task 22: AISuggestionCard — AI game recommendation card for planning
+
+**Files:**
+- Create: `apps/web/src/components/game-nights/AISuggestionCard.tsx`
+- Test: `apps/web/src/components/game-nights/__tests__/AISuggestionCard.test.tsx`
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// apps/web/src/components/game-nights/__tests__/AISuggestionCard.test.tsx
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+
+import { AISuggestionCard } from '../AISuggestionCard';
+
+describe('AISuggestionCard', () => {
+  it('renders AI suggestion title', () => {
+    render(<AISuggestionCard suggestions={[{ gameTitle: 'Catan', reason: 'Perfect for 4 players' }]} />);
+    expect(screen.getByText(/suggerimenti ai/i)).toBeInTheDocument();
+  });
+
+  it('renders game suggestions', () => {
+    render(<AISuggestionCard suggestions={[{ gameTitle: 'Catan', reason: 'Adatto a principianti' }]} />);
+    expect(screen.getByText('Catan')).toBeInTheDocument();
+    expect(screen.getByText(/adatto a principianti/i)).toBeInTheDocument();
+  });
+
+  it('shows empty state when no suggestions', () => {
+    render(<AISuggestionCard suggestions={[]} />);
+    expect(screen.getByText(/nessun suggerimento/i)).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd apps/web && pnpm vitest run src/components/game-nights/__tests__/AISuggestionCard.test.tsx`
+Expected: FAIL
+
+- [ ] **Step 3: Write implementation**
+
+```tsx
+// apps/web/src/components/game-nights/AISuggestionCard.tsx
+'use client';
+
+import { Bot, Sparkles } from 'lucide-react';
+
+interface Suggestion {
+  gameTitle: string;
+  reason: string;
+}
+
+interface AISuggestionCardProps {
+  suggestions: Suggestion[];
+}
+
+export function AISuggestionCard({ suggestions }: AISuggestionCardProps) {
+  return (
+    <div className="rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-primary/5 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles className="h-4 w-4 text-purple-500" />
+        <h3 className="text-sm font-semibold">Suggerimenti AI</h3>
+      </div>
+      {suggestions.length === 0 ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Bot className="h-4 w-4" />
+          <span>Nessun suggerimento — aggiungi giocatori per consigli personalizzati</span>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {suggestions.map((s) => (
+            <div key={s.gameTitle} className="flex items-start gap-2">
+              <Bot className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
+              <div>
+                <span className="text-sm font-medium">{s.gameTitle}</span>
+                <p className="text-xs text-muted-foreground">{s.reason}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd apps/web && pnpm vitest run src/components/game-nights/__tests__/AISuggestionCard.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/components/game-nights/AISuggestionCard.tsx apps/web/src/components/game-nights/__tests__/AISuggestionCard.test.tsx
+git commit -m "feat(game-nights): add AISuggestionCard with gradient design"
+```
+
+---
+
+## Chunk 10: Activity Feed Input Bar & Mobile Components
+
+### Task 23: ActivityFeedInputBar — message input for activity feed
+
+**Files:**
+- Create: `apps/web/src/components/session/ActivityFeedInputBar.tsx`
+- Test: `apps/web/src/components/session/__tests__/ActivityFeedInputBar.test.tsx`
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// apps/web/src/components/session/__tests__/ActivityFeedInputBar.test.tsx
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+
+import { useSessionStore } from '@/store/session';
+import { ActivityFeedInputBar } from '../ActivityFeedInputBar';
+
+describe('ActivityFeedInputBar', () => {
+  beforeEach(() => {
+    useSessionStore.setState(useSessionStore.getInitialState());
+  });
+
+  it('renders text input', () => {
+    render(<ActivityFeedInputBar playerId="p1" playerName="Alice" />);
+    expect(screen.getByPlaceholderText(/nota/i)).toBeInTheDocument();
+  });
+
+  it('renders quick action buttons', () => {
+    render(<ActivityFeedInputBar playerId="p1" playerName="Alice" />);
+    expect(screen.getByRole('button', { name: /dadi/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /foto/i })).toBeInTheDocument();
+  });
+
+  it('adds note event on submit', async () => {
+    const user = userEvent.setup();
+    render(<ActivityFeedInputBar playerId="p1" playerName="Alice" />);
+    const input = screen.getByPlaceholderText(/nota/i);
+    await user.type(input, 'Great move!');
+    await user.click(screen.getByRole('button', { name: /invia/i }));
+    expect(useSessionStore.getState().events).toHaveLength(1);
+    expect(useSessionStore.getState().events[0].type).toBe('note');
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd apps/web && pnpm vitest run src/components/session/__tests__/ActivityFeedInputBar.test.tsx`
+Expected: FAIL
+
+- [ ] **Step 3: Write implementation**
+
+```tsx
+// apps/web/src/components/session/ActivityFeedInputBar.tsx
+'use client';
+
+import { useState } from 'react';
+import { Camera, Dice5, Bot, Send } from 'lucide-react';
+import { useSessionStore } from '@/store/session';
+import { cn } from '@/lib/utils';
+
+interface ActivityFeedInputBarProps {
+  playerId: string;
+  playerName: string;
+  onDiceClick?: () => void;
+  onCameraClick?: () => void;
+  onAIClick?: () => void;
+}
+
+export function ActivityFeedInputBar({
+  playerId, playerName, onDiceClick, onCameraClick, onAIClick,
+}: ActivityFeedInputBarProps) {
+  const [text, setText] = useState('');
+  const addEvent = useSessionStore((s) => s.addEvent);
+
+  const handleSend = () => {
+    if (!text.trim()) return;
+    addEvent({
+      id: crypto.randomUUID(),
+      type: 'note',
+      playerId,
+      data: { playerName, text: text.trim() },
+      timestamp: new Date().toISOString(),
+    });
+    setText('');
+  };
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-card">
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+        placeholder="Scrivi una nota..."
+        className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+      />
+      <div className="flex items-center gap-1 shrink-0">
+        <button onClick={onDiceClick} aria-label="Dadi" className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors">
+          <Dice5 className="h-4 w-4" />
+        </button>
+        <button onClick={onCameraClick} aria-label="Foto" className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors">
+          <Camera className="h-4 w-4" />
+        </button>
+        <button onClick={onAIClick} aria-label="AI" className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors">
+          <Bot className="h-4 w-4" />
+        </button>
+        <button
+          onClick={handleSend}
+          aria-label="Invia nota"
+          className={cn('p-1.5 rounded-md transition-colors', text.trim() ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground')}
+        >
+          <Send className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd apps/web && pnpm vitest run src/components/session/__tests__/ActivityFeedInputBar.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/components/session/ActivityFeedInputBar.tsx apps/web/src/components/session/__tests__/ActivityFeedInputBar.test.tsx
+git commit -m "feat(session): add ActivityFeedInputBar with note input and quick actions"
+```
+
+---
+
+### Task 24: MobileScorebar — horizontal player mini-cards
+
+**Files:**
+- Create: `apps/web/src/components/session/MobileScorebar.tsx`
+- Test: `apps/web/src/components/session/__tests__/MobileScorebar.test.tsx`
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// apps/web/src/components/session/__tests__/MobileScorebar.test.tsx
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+
+import { MobileScorebar } from '../MobileScorebar';
+
+const players = [
+  { id: 'p1', name: 'Alice', score: 10 },
+  { id: 'p2', name: 'Bob', score: 15 },
+  { id: 'p3', name: 'Carol', score: 8 },
+];
+
+describe('MobileScorebar', () => {
+  it('renders all player mini-cards', () => {
+    render(<MobileScorebar players={players} />);
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+    expect(screen.getByText('Carol')).toBeInTheDocument();
+  });
+
+  it('shows scores', () => {
+    render(<MobileScorebar players={players} />);
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('15')).toBeInTheDocument();
+  });
+
+  it('is hidden on desktop (lg:hidden)', () => {
+    render(<MobileScorebar players={players} />);
+    const bar = screen.getByTestId('mobile-scorebar');
+    expect(bar.className).toContain('lg:hidden');
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd apps/web && pnpm vitest run src/components/session/__tests__/MobileScorebar.test.tsx`
+Expected: FAIL
+
+- [ ] **Step 3: Write implementation**
+
+```tsx
+// apps/web/src/components/session/MobileScorebar.tsx
+'use client';
+
+interface PlayerScore {
+  id: string;
+  name: string;
+  score: number;
+}
+
+interface MobileScorebarProps {
+  players: PlayerScore[];
+}
+
+export function MobileScorebar({ players }: MobileScorebarProps) {
+  return (
+    <div
+      data-testid="mobile-scorebar"
+      className="flex gap-2 px-3 overflow-x-auto scrollbar-none lg:hidden"
+      style={{ height: 'var(--mobile-scorebar-height, 52px)' }}
+    >
+      {players.map((p) => (
+        <div
+          key={p.id}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border shrink-0"
+        >
+          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold">
+            {p.name[0]}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-medium truncate max-w-[60px]">{p.name}</span>
+            <span className="text-sm font-bold tabular-nums">{p.score}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd apps/web && pnpm vitest run src/components/session/__tests__/MobileScorebar.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/components/session/MobileScorebar.tsx apps/web/src/components/session/__tests__/MobileScorebar.test.tsx
+git commit -m "feat(session): add MobileScorebar with horizontal player mini-cards"
+```
+
+---
+
+## Chunk 11: Store Selectors & Final Validation
+
+### Task 25: Add selectors to all three new Zustand stores
+
+**Files:**
+- Modify: `apps/web/src/store/quick-view/store.ts`
+- Modify: `apps/web/src/store/game-night/store.ts`
+- Modify: `apps/web/src/store/session/store.ts`
+
+- [ ] **Step 1: Add selectors to each store**
+
+Append to each store file, following the `admin-games/store.ts` pattern:
+
+```ts
+// quick-view/store.ts — add after store definition
+export const selectIsOpen = (s: QuickViewState) => s.isOpen;
+export const selectSelectedGameId = (s: QuickViewState) => s.selectedGameId;
+export const selectActiveTab = (s: QuickViewState) => s.activeTab;
+export const selectIsCollapsed = (s: QuickViewState) => s.isCollapsed;
+
+// game-night/store.ts — add after store definition
+export const selectGameNights = (s: GameNightState) => s.gameNights;
+export const selectSelectedId = (s: GameNightState) => s.selectedId;
+export const selectPlayers = (s: GameNightState) => s.players;
+export const selectSelectedGames = (s: GameNightState) => s.selectedGames;
+export const selectTimeline = (s: GameNightState) => s.timeline;
+export const selectIsLoading = (s: GameNightState) => s.isLoading;
+export const selectPlayerCount = (s: GameNightState) => s.players.length;
+
+// session/store.ts — add after store definition
+export const selectStatus = (s: SessionState) => s.status;
+export const selectEvents = (s: SessionState) => s.events;
+export const selectScores = (s: SessionState) => s.scores;
+export const selectCurrentTurn = (s: SessionState) => s.currentTurn;
+export const selectIsPaused = (s: SessionState) => s.isPaused;
+export const selectIsLive = (s: SessionState) => s.status === 'live' || s.status === 'paused';
+```
+
+Also export state interfaces from each store file and barrel export selectors from `index.ts`.
+
+- [ ] **Step 2: Run existing store tests to verify nothing breaks**
+
+Run: `cd apps/web && pnpm vitest run src/store/`
+Expected: All PASS
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add apps/web/src/store/
+git commit -m "feat(store): add selectors to QuickView, GameNight, and Session stores"
+```
+
+---
+
+### Task 26: Final validation — all tests, typecheck, lint
+
+- [ ] **Step 1: Run ALL new tests**
+
+Run: `cd apps/web && pnpm vitest run src/store/ src/components/game-nights/ src/components/session/ src/components/layout/QuickView/ src/components/layout/CollapsiblePanel/`
+Expected: All PASS
+
+- [ ] **Step 2: Run typecheck**
+
+Run: `cd apps/web && pnpm typecheck`
+Expected: No errors
+
+- [ ] **Step 3: Run lint**
+
+Run: `cd apps/web && pnpm lint`
+Expected: No errors
+
+- [ ] **Step 4: Fix any issues found**
+
+- [ ] **Step 5: Final commit if needed**
+
+---
+
+### Task 27: PR, issue update, code review
+
+(Replaces Task 17 scope — updated PR description to include all chunks)
+
+- [ ] **Step 1: Push branch**
+
+```bash
+git push -u origin feature/issue-148-game-table-s1
+```
+
+- [ ] **Step 2: Create PR to `frontend-dev`**
+
+```bash
+gh pr create --base frontend-dev --title "feat(game-table): S1 Phase 2 — complete Game Table layout" --body-file /dev/stdin <<'EOF'
+## Summary
+
+- **Quick View panel** (300px, 3 tabs: Regole/FAQ/AI, collapse to 44px, AI chat with quick prompts)
+- **Game Night list** with status cards (upcoming/draft/completed), player avatars, game thumbnails
+- **Game Night planning** — two-column layout, dealt cards with rotation, InlineGamePicker with player count filter, timeline, AI suggestion card
+- **Live Session** — 3-column layout with collapsible panels (persisted), ActivityFeed with 9 event types + input bar, DiceRoller
+- **Mobile** — MobileStatusBar (LIVE/pause), MobileScorebar (horizontal player cards)
+- **3 Zustand stores** with selectors: useQuickViewStore, useGameNightStore, useSessionStore
+- **Design tokens**: panel dimensions, status bar/scorebar heights
+- **CollapsiblePanel** reusable component
+
+## Test plan
+
+- [ ] All unit tests pass (`pnpm vitest run`)
+- [ ] Typecheck passes (`pnpm typecheck`)
+- [ ] Lint passes (`pnpm lint`)
+- [ ] QuickView opens/closes/collapses, AI tab has chat + prompts
+- [ ] GameNightCard shows 3 status variants with avatars/thumbnails
+- [ ] Planning page: dealt cards with rotation, InlineGamePicker filters by player count
+- [ ] DiceRoller logs events to ActivityFeed
+- [ ] LiveSessionLayout 3-column on lg+, collapsible panels persist preference
+- [ ] MobileStatusBar LIVE indicator on mobile only
+- [ ] MobileScorebar horizontal scroll on mobile only
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+```
+
+- [ ] **Step 3: Update issue #148**
+
+```bash
+gh issue comment 148 --body "S1 Phase 2 complete — all 10 spec items implemented. PR ready for review."
 ```
 
 - [ ] **Step 4: Request code review**
