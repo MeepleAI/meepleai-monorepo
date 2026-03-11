@@ -186,7 +186,11 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
                 var decision = new LlmRoutingDecision(
                     ProviderName: fallbackClient.ProviderName,
                     ModelId: modelId,
-                    Reason: $"Fallback from {failedProvider}");
+                    Reason: $"Fallback from {failedProvider}")
+                {
+                    // Issue #27: Preserve region hint across fallback decisions
+                    UserRegion = _userRegionDetector?.DetectRegion()
+                };
                 return new ProviderSelectionResult(fallbackClient, decision);
             }
         }
