@@ -56,6 +56,7 @@ export { SimpleDiceRoller } from './SimpleDiceRoller';
 export { LiveSessionLayout } from './LiveSessionLayout';
 export { MobileStatusBar } from './MobileStatusBar';
 export { ActivityFeedInputBar } from './ActivityFeedInputBar';
+export { MobileScorebar } from './MobileScorebar';
 
 export type {
   Participant,
