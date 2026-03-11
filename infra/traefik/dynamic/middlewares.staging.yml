@@ -1,0 +1,139 @@
+# Traefik Dynamic Configuration - Staging Middlewares
+# Security headers and rate limiting for meepleai.app
+#
+# Environment-specific CORS:
+# - Development: localhost:3000, localhost:8080 (see middlewares.yml)
+# - Staging: meepleai.app (this file)
+# - Production: meepleai.io (see middlewares.prod.yml)
+
+http:
+  middlewares:
+    # CORS for API services - Staging
+    cors-api:
+      headers:
+        accessControlAllowOriginList:
+          - "https://meepleai.app"
+          - "https://www.meepleai.app"
+          - "https://api.meepleai.app"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+          - "Accept"
+          - "Origin"
+          - "X-CSRF-Token"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 7200
+        accessControlExposeHeaders:
+          - "X-Request-Id"
+          - "X-RateLimit-Limit"
+          - "X-RateLimit-Remaining"
+
+    # Security Headers (OWASP recommended)
+    security-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: "SAMEORIGIN"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
+          X-Download-Options: "noopen"
+          X-Permitted-Cross-Domain-Policies: "none"
+          Referrer-Policy: "strict-origin-when-cross-origin"
+          Permissions-Policy: "camera=(), microphone=(), geolocation=(), payment=()"
+
+    # Rate Limiting - API (staging: same as production for realistic testing)
+    rate-limit-api:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Rate Limiting - Web
+    rate-limit-web:
+      rateLimit:
+        average: 200
+        burst: 400
+        period: 1m
+
+    # Rate Limiting - Auth endpoints (strict)
+    rate-limit-auth:
+      rateLimit:
+        average: 10
+        burst: 20
+        period: 1m
+
+    # Basic Auth for Dashboard
+    dashboard-auth:
+      basicAuth:
+        users:
+          # Generate with: htpasswd -nbB admin "your-password" | sed -e s/\\$/\\$\\$/g
+          - "admin:$$2y$$05$$REPLACE_WITH_BCRYPT_HASH"
+
+    # Compress responses
+    compress:
+      compress:
+        excludedContentTypes:
+          - text/event-stream
+
+    # Retry middleware
+    retry:
+      retry:
+        attempts: 3
+        initialInterval: 100ms
+
+    # Circuit breaker
+    circuit-breaker:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.30 || ResponseCodeRatio(500, 600, 0, 600) > 0.25"
+        checkPeriod: 10s
+        fallbackDuration: 30s
+        recoveryDuration: 15s
+
+    # IP Whitelist (for admin endpoints)
+    ip-whitelist-admin:
+      ipAllowList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+
+    # Chain for API
+    api-chain:
+      chain:
+        middlewares:
+          - security-headers
+          - rate-limit-api
+          - circuit-breaker
+          - retry
+          - compress
+
+    # Chain for Web
+    web-chain:
+      chain:
+        middlewares:
+          - security-headers
+          - rate-limit-web
+          - compress
+
+    # Chain for Auth
+    auth-chain:
+      chain:
+        middlewares:
+          - security-headers
+          - rate-limit-auth

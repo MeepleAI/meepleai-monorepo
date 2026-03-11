@@ -1,0 +1,105 @@
+# Traefik v3.2 Staging Configuration for meepleai.app
+#
+# This file replaces traefik.yml for staging deployment
+# Features:
+# - HTTPS with Let's Encrypt automatic certificates
+# - HTTP to HTTPS redirect
+# - Security headers
+# - Rate limiting
+# - Docker socket proxy for security
+#
+# Usage:
+#   Mount as volume override in compose.staging-traefik.yml
+
+# API & Dashboard - SECURED
+api:
+  dashboard: true
+  # Dashboard requires authentication via middleware (see compose labels)
+
+# Entry Points
+entryPoints:
+  # HTTP - redirects to HTTPS
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  # HTTPS - main entry point
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: "meepleai.app"
+            sans:
+              - "*.meepleai.app"
+      middlewares:
+        - security-headers@file
+
+# Logging - Staging settings (more verbose than production)
+log:
+  level: INFO
+  filePath: "/var/log/traefik/traefik.log"
+  format: json
+  maxSize: 50
+  maxBackups: 3
+  maxAge: 14
+  compress: true
+
+# Access Logs - with sensitive header filtering
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: json
+  bufferingSize: 100
+  fields:
+    headers:
+      defaultMode: keep
+      names:
+        Authorization: drop
+        Cookie: drop
+        Set-Cookie: drop
+
+# Providers
+providers:
+  # Docker Provider via Socket Proxy (SECURE)
+  docker:
+    endpoint: "tcp://docker-socket-proxy:2375"
+    exposedByDefault: false
+    network: "meepleai"
+    watch: true
+
+  # File Provider (dynamic configuration)
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
+
+# Let's Encrypt Certificate Resolver
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "admin@meepleai.app"
+      storage: "/letsencrypt/acme.json"
+      httpChallenge:
+        entryPoint: web
+
+# Metrics for Prometheus
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+
+# Global settings
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
