@@ -50,6 +50,7 @@ export { CameraToolContent } from './CameraToolContent';
 export type { CameraToolContentProps } from './CameraToolContent';
 export { PauseSessionDialog } from './PauseSessionDialog';
 export type { PauseSessionDialogProps } from './PauseSessionDialog';
+export { ActivityFeedEvent } from './ActivityFeedEvent';
 
 export type {
   Participant,
