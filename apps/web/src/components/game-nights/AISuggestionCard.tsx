@@ -25,7 +25,7 @@ export function AISuggestionCard({ suggestions }: AISuggestionCardProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {suggestions.map((s) => (
+          {suggestions.map(s => (
             <div key={s.gameTitle} className="flex items-start gap-2">
               <Bot className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
               <div>
