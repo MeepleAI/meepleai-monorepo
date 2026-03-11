@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 /// <summary>
 /// DTO representing the result of parsing and optionally recording a score from natural language.
 /// </summary>
-internal sealed record ScoreParseResultDto
+public sealed record ScoreParseResultDto
 {
     /// <summary>
     /// Status of the parse operation: "parsed", "recorded", "ambiguous", or "unrecognized".

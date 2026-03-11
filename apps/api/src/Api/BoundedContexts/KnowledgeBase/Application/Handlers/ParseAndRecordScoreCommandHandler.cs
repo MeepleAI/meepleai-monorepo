@@ -168,7 +168,11 @@ internal sealed class ParseAndRecordScoreCommandHandler
                 .ConfigureAwait(false);
             return session.CurrentTurnIndex > 0 ? session.CurrentTurnIndex : 1;
         }
-        catch
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
         {
             return 1;
         }

@@ -79,7 +79,7 @@ export function ScoreAssistant({ sessionId, onScoreRecorded, className }: ScoreA
   // ----- Confirm a parsed score -----
   const handleConfirm = useCallback(
     async (result: ScoreParseResult) => {
-      if (!result.playerId || !result.value || !result.round || !result.dimension) return;
+      if (!result.playerId || result.value == null || !result.round || !result.dimension) return;
 
       setState({ kind: 'loading' });
 
