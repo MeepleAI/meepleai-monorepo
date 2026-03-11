@@ -6,7 +6,9 @@ import { cn } from '@/lib/utils';
 import { useQuickViewStore, type QuickViewTab as TabType } from '@/store/quick-view';
 
 import { AIQuickViewContent } from './AIQuickViewContent';
+import { FaqContent } from './FaqContent';
 import { QuickViewTab } from './QuickViewTab';
+import { RulesContent } from './RulesContent';
 
 const TABS: { tab: TabType; label: string; icon: typeof BookOpen }[] = [
   { tab: 'rules', label: 'Regole', icon: BookOpen },
@@ -15,7 +17,7 @@ const TABS: { tab: TabType; label: string; icon: typeof BookOpen }[] = [
 ];
 
 export function QuickView() {
-  const { isOpen, isCollapsed, activeTab, setActiveTab, close, toggleCollapsed } =
+  const { isOpen, isCollapsed, activeTab, selectedGameId, setActiveTab, close, toggleCollapsed } =
     useQuickViewStore();
 
   if (!isOpen) return null;
@@ -85,13 +87,11 @@ export function QuickView() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'rules' && (
-          <p className="text-sm text-muted-foreground">Seleziona un gioco per vederne le regole</p>
+        {activeTab === 'rules' && <RulesContent gameId={selectedGameId} />}
+        {activeTab === 'faq' && <FaqContent gameId={selectedGameId} />}
+        {activeTab === 'ai' && (
+          <AIQuickViewContent gameId={selectedGameId ?? ''} gameName="Gioco" />
         )}
-        {activeTab === 'faq' && (
-          <p className="text-sm text-muted-foreground">Domande frequenti sul gioco</p>
-        )}
-        {activeTab === 'ai' && <AIQuickViewContent gameId="" gameName="Gioco" />}
       </div>
     </aside>
   );
