@@ -36,30 +36,36 @@ const initialState = {
 
 export const useSessionStore = create<SessionState>()(
   devtools(
-    immer((set) => ({
+    immer(set => ({
       ...initialState,
 
       startSession: (sessionId, gameId) =>
-        set((s) => {
+        set(s => {
           s.status = 'live';
           s.sessionId = sessionId;
           s.gameId = gameId;
           s.timerStartedAt = new Date().toISOString();
         }),
 
-      endSession: () => set((s) => { s.status = 'ended'; }),
+      endSession: () =>
+        set(s => {
+          s.status = 'ended';
+        }),
 
       togglePause: () =>
-        set((s) => {
+        set(s => {
           s.isPaused = !s.isPaused;
           s.status = s.isPaused ? 'paused' : 'live';
         }),
 
-      addEvent: (event) => set((s) => { s.events.push(event); }),
+      addEvent: event =>
+        set(s => {
+          s.events.push(event);
+        }),
 
       updateScore: (playerId, score) =>
-        set((s) => {
-          const existing = s.scores.find((sc) => sc.playerId === playerId);
+        set(s => {
+          const existing = s.scores.find(sc => sc.playerId === playerId);
           if (existing) {
             existing.score = score;
           } else {
@@ -67,7 +73,10 @@ export const useSessionStore = create<SessionState>()(
           }
         }),
 
-      nextTurn: () => set((s) => { s.currentTurn += 1; }),
+      nextTurn: () =>
+        set(s => {
+          s.currentTurn += 1;
+        }),
 
       reset: () => set(() => ({ ...initialState })),
     })),

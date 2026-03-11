@@ -32,7 +32,11 @@ describe('useSessionStore', () => {
 
   it('adds events to the feed', () => {
     useSessionStore.getState().addEvent({
-      id: 'e1', type: 'dice_roll', playerId: 'p1', data: { values: [3, 4], total: 7 }, timestamp: new Date().toISOString(),
+      id: 'e1',
+      type: 'dice_roll',
+      playerId: 'p1',
+      data: { values: [3, 4], total: 7 },
+      timestamp: new Date().toISOString(),
     } as any);
     expect(useSessionStore.getState().events).toHaveLength(1);
   });
