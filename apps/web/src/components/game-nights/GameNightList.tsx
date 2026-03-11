@@ -2,7 +2,9 @@
 
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
+
 import type { GameNightSummary } from '@/store/game-night';
+
 import { GameNightCard } from './GameNightCard';
 import { GameNightListSkeleton } from './GameNightListSkeleton';
 
@@ -31,7 +33,7 @@ export function GameNightList({ nights, isLoading }: GameNightListProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {nights.map((night) => (
+      {nights.map(night => (
         <GameNightCard key={night.id} night={night} />
       ))}
     </div>
