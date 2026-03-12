@@ -169,6 +169,13 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
             _logger,
             cancellationToken).ConfigureAwait(false);
 
+        // Seed default tier definitions (D3: Game Night Flow)
+        _logger.LogInformation("Seeding tier definitions...");
+        await TierDefinitionSeeder.SeedTierDefinitionsAsync(
+            _dbContext,
+            _logger,
+            cancellationToken).ConfigureAwait(false);
+
         // Seed PDF rulebooks from data/rulebook/ directory (idempotent)
         _logger.LogInformation("Seeding PDF rulebooks...");
         await PdfRulebookSeeder.SeedRulebooksAsync(
