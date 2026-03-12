@@ -123,6 +123,25 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // provides operators with debugging context via the indexing_error field.
             // Context: Covers unforeseen errors after specific exception handlers above
             _logger.LogError(ex, "Unexpected error indexing PDF {PdfId}", pdfId);
+
+            // Persist failed state so the PDF doesn't remain stuck in "Indexing"
+            try
+            {
+                var failedPdf = await _db.PdfDocuments
+                    .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, CancellationToken.None).ConfigureAwait(false);
+                if (failedPdf != null)
+                {
+                    failedPdf.ProcessingState = "Failed";
+                    failedPdf.ProcessingStatus = "failed";
+                    failedPdf.ProcessingError = $"Unexpected error: {ex.Message}";
+                    await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+                }
+            }
+            catch (Exception dbEx)
+            {
+                _logger.LogError(dbEx, "Failed to persist error state for PDF {PdfId}", pdfId);
+            }
+
             return IndexingResultDto.CreateFailure($"Unexpected error: {ex.Message}", PdfIndexingErrorCode.UnexpectedError);
         }
 #pragma warning restore CA1031
