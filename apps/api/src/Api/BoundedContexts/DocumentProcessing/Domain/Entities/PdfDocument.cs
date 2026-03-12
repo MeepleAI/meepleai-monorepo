@@ -548,10 +548,14 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Accepts the copyright disclaimer for this document.
     /// Issue #5446: Required before processing starts.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the disclaimer has already been accepted.</exception>
     public void AcceptCopyrightDisclaimer(Guid userId)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("User ID cannot be empty", nameof(userId));
+
+        if (CopyrightDisclaimerAcceptedAt.HasValue)
+            throw new InvalidOperationException("Copyright disclaimer has already been accepted");
 
         CopyrightDisclaimerAcceptedAt = DateTime.UtcNow;
         CopyrightDisclaimerAcceptedBy = userId;

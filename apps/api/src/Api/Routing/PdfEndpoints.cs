@@ -797,12 +797,7 @@ internal static class PdfEndpoints
 
         var result = await mediator.Send(new AcceptCopyrightDisclaimerCommand(pdfId, userId), ct).ConfigureAwait(false);
 
-        if (!result.Success)
-        {
-            return Results.NotFound(new { error = result.Message });
-        }
-
-        return Results.Ok(new { success = true, message = result.Message });
+        return Results.Ok(new { success = result.Success, message = result.Message });
     }
 
     /// <summary>
