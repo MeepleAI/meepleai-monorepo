@@ -2,6 +2,10 @@
 
 @plugin "tailwindcss-animate";
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* Import design system tokens */
 @import "./design-tokens.css";
 
