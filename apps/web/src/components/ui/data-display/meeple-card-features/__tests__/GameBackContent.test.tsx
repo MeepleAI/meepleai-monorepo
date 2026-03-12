@@ -145,8 +145,9 @@ describe('InfoChips', () => {
   });
 
   it('renders single player count when min equals max', () => {
-    renderComponent({ minPlayers: 3, maxPlayers: 3 });
-    expect(screen.getByText('3')).toBeInTheDocument();
+    renderComponent({ minPlayers: 3, maxPlayers: 3, entityLinkCount: 0 });
+    const infoChips = screen.getByTestId('info-chips');
+    expect(infoChips).toHaveTextContent('3');
   });
 
   it('renders playing time chip', () => {
@@ -237,12 +238,14 @@ describe('KB Context Label', () => {
 
   it('shows "KB pronta · N doc" when hasKb and kbCardCount > 0', () => {
     renderComponent({ hasKb: true, kbCardCount: 5 });
-    expect(screen.getByText(/KB pronta · 5 doc/)).toBeInTheDocument();
+    const label = screen.getByTestId('kb-context-label');
+    expect(label).toHaveTextContent('KB pronta · 5 doc');
   });
 
   it('shows "KB in elaborazione" when hasKb but kbCardCount is 0', () => {
     renderComponent({ hasKb: true, kbCardCount: 0 });
-    expect(screen.getByText(/KB in elaborazione/)).toBeInTheDocument();
+    const label = screen.getByTestId('kb-context-label');
+    expect(label).toHaveTextContent('KB in elaborazione');
   });
 
   it('does not show KB label when hasKb is false', () => {
@@ -275,7 +278,8 @@ describe('Compact Footer', () => {
 
   it('shows noteCount when > 0', () => {
     renderComponent({ noteCount: 2 });
-    expect(screen.getByText('2')).toBeInTheDocument();
+    const noteIndicator = screen.getByTestId('note-count-indicator');
+    expect(noteIndicator).toHaveTextContent('2');
   });
 
   it('hides noteCount indicator when 0', () => {
