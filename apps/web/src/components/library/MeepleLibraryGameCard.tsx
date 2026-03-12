@@ -64,6 +64,7 @@ import type {
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
+import { useViewTransition } from '@/lib/hooks/useViewTransition';
 
 import { AgentDrawerSheet } from './AgentDrawerSheet';
 import { ChatDrawerSheet } from './ChatDrawerSheet';
@@ -173,6 +174,7 @@ export function MeepleLibraryGameCard({
   flippable,
   className,
 }: MeepleLibraryGameCardProps) {
+  const { navigateWithTransition } = useViewTransition();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   // Issue #4777: Agent creation sheet state
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
@@ -250,7 +252,7 @@ export function MeepleLibraryGameCard({
         icon: MessageCircle,
         label: 'Chat con Agent',
         onClick: () => {
-          window.location.href = `/chat/new?game=${game.gameId}`;
+          navigateWithTransition(`/chat/new?game=${game.gameId}`);
         },
         // Show whenever hasKb is true; always clickable so the chat page can handle agent selection
         hidden: !game.hasKb,
@@ -290,6 +292,7 @@ export function MeepleLibraryGameCard({
       game.notes,
       handleToggleFavorite,
       isTogglingFavorite,
+      navigateWithTransition,
       onConfigureAgent,
       onUploadPdf,
       onEditNotes,
@@ -379,16 +382,23 @@ export function MeepleLibraryGameCard({
     return {
       onChatAgent: game.hasKb
         ? () => {
-            window.location.href = `/chat/new?game=${game.gameId}`;
+            navigateWithTransition(`/chat/new?game=${game.gameId}`);
           }
         : undefined,
       onToggleFavorite: handleToggleFavorite,
       isFavorite: game.isFavorite,
       onNewSession: () => {
-        window.location.href = `/library/games/${game.gameId}/sessions/new`;
+        navigateWithTransition(`/library/games/${game.gameId}/sessions/new`);
       },
     };
-  }, [flippable, game.hasKb, game.gameId, game.isFavorite, handleToggleFavorite]);
+  }, [
+    flippable,
+    game.hasKb,
+    game.gameId,
+    game.isFavorite,
+    handleToggleFavorite,
+    navigateWithTransition,
+  ]);
 
   // ============================================================================
   // Render
@@ -413,7 +423,7 @@ export function MeepleLibraryGameCard({
             ? undefined
             : flippable
               ? undefined // Let FlipCard handle clicks
-              : () => (window.location.href = `/library/games/${game.gameId}`)
+              : () => navigateWithTransition(`/library/games/${game.gameId}`)
         }
         flippable={flippable}
         flipData={flipData}

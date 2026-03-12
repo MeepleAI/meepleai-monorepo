@@ -14,22 +14,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// Mock date-fns to control relative time output
-vi.mock('date-fns', () => ({
-  formatDistanceToNow: vi.fn((date: Date) => {
-    // Return predictable strings based on date
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    if (diffMs < 0) return 'tra 2 giorni';
-    if (diffMs < 86400000) return 'meno di un giorno fa';
-    return '3 giorni fa';
-  }),
-}));
-
-vi.mock('date-fns/locale', () => ({
-  it: { code: 'it' },
-}));
-
 const defaultData: GameBackData = {
   complexityRating: 3.2,
   playingTimeMinutes: 90,
@@ -43,9 +27,9 @@ const defaultData: GameBackData = {
   ],
   hasKb: true,
   kbCardCount: 5,
-  lastPlayedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+  lastPlayedLabel: '3 giorni fa',
   winRate: 65,
-  nextGameNight: new Date(Date.now() + 2 * 86400000).toISOString(),
+  nextGameNight: 'Sab 21:00',
   entityLinkCount: 3,
   noteCount: 2,
 };
@@ -109,13 +93,13 @@ describe('Enriched Header', () => {
     vi.clearAllMocks();
   });
 
-  it('shows "Mai giocato" when lastPlayedAt is undefined', () => {
-    renderComponent({ lastPlayedAt: undefined });
+  it('shows "Mai giocato" when lastPlayedLabel is undefined', () => {
+    renderComponent({ lastPlayedLabel: undefined });
     expect(screen.getByText(/Mai giocato/)).toBeInTheDocument();
   });
 
-  it('shows relative date when lastPlayedAt is provided', () => {
-    renderComponent({ lastPlayedAt: new Date(Date.now() - 3 * 86400000).toISOString() });
+  it('shows lastPlayedLabel when provided', () => {
+    renderComponent({ lastPlayedLabel: '3 giorni fa' });
     expect(screen.getByText(/3 giorni fa/)).toBeInTheDocument();
   });
 
@@ -218,9 +202,9 @@ describe('ContextualActions', () => {
   });
 
   it('shows Aggiungi a serata with nextGameNight context', () => {
-    renderComponent({ nextGameNight: 'Sab 21:00' }, { onAddToGameNight: vi.fn() });
+    renderComponent({ nextGameNight: 'Ven 20:30' }, { onAddToGameNight: vi.fn() });
     expect(screen.getByText('Aggiungi a serata')).toBeInTheDocument();
-    expect(screen.getByText('Sab 21:00')).toBeInTheDocument();
+    expect(screen.getByText('Ven 20:30')).toBeInTheDocument();
   });
 
   it('hides Aggiungi a serata when onAddToGameNight is undefined', () => {

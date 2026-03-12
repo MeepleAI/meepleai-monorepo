@@ -10,10 +10,8 @@
 
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 
-import { formatDistanceToNow } from 'date-fns';
-import { it as itLocale } from 'date-fns/locale';
 import { Bot, Calendar, Clock, Heart, Link2, Play, StickyNote, Star, Users } from 'lucide-react';
 import Link from 'next/link';
 
@@ -42,8 +40,8 @@ export interface GameBackData {
   hasKb?: boolean;
   /** Number of KB cards */
   kbCardCount?: number;
-  /** ISO date string of last time played */
-  lastPlayedAt?: string;
+  /** Pre-formatted "last played" label (consumer handles locale) */
+  lastPlayedLabel?: string;
   /** Win rate percentage (0-100) */
   winRate?: number;
   /** ISO date string of next game night */
@@ -100,15 +98,23 @@ function ContextualAction({
   colorHsl: string;
   onClick?: () => void;
 }) {
+  const id = useId();
+  const contextId = context ? `${id}-ctx` : undefined;
+
   return (
     <button
       type="button"
-      className="flex items-center gap-2 w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors"
+      className={cn(
+        'flex items-center gap-2 w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors',
+        !onClick && 'opacity-50 cursor-not-allowed'
+      )}
       style={{
         backgroundColor: `hsla(${colorHsl}, 0.08)`,
         borderColor: `hsla(${colorHsl}, 0.15)`,
         color: `hsl(${colorHsl})`,
       }}
+      disabled={!onClick}
+      aria-describedby={contextId}
       onClick={e => {
         e.stopPropagation();
         onClick?.();
@@ -116,7 +122,11 @@ function ContextualAction({
     >
       <Icon className="w-4 h-4 shrink-0" />
       <span>{label}</span>
-      {context && <span className="ml-auto text-[10px] text-muted-foreground">{context}</span>}
+      {context && (
+        <span id={contextId} className="ml-auto text-[10px] text-muted-foreground">
+          {context}
+        </span>
+      )}
     </button>
   );
 }
@@ -145,7 +155,7 @@ export const GameBackContent = React.memo(function GameBackContent({
     timesPlayed = 0,
     hasKb,
     kbCardCount = 0,
-    lastPlayedAt,
+    lastPlayedLabel = 'Mai giocato',
     winRate,
     entityLinkCount = 0,
     noteCount = 0,
@@ -158,10 +168,6 @@ export const GameBackContent = React.memo(function GameBackContent({
         ? `${minPlayers}`
         : `${minPlayers}-${maxPlayers}`
       : '—';
-
-  const lastPlayedLabel = lastPlayedAt
-    ? formatDistanceToNow(new Date(lastPlayedAt), { locale: itLocale, addSuffix: true })
-    : 'Mai giocato';
 
   const complexityDots = complexityRating != null ? Math.round(complexityRating) : null;
 
