@@ -265,6 +265,13 @@ internal static class SharedGameCatalogEndpoints
             .WithDescription("Checks if a game with given BGG ID exists. Returns both existing game data and fresh BGG data for diff comparison.")
             .Produces<BggDuplicateCheckResult>();
 
+        // Distinct metadata for autocomplete (categories, mechanics, designers, publishers)
+        group.MapGet("/admin/shared-games/metadata/distinct", HandleGetDistinctMetadata)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetDistinctMetadata")
+            .WithSummary("Get distinct categories, mechanics, designers, publishers (Admin/Editor)")
+            .Produces<DistinctMetadataDto>();
+
         // Update existing game from BGG with selective field updates
         group.MapPut("/admin/shared-games/{id:guid}/update-from-bgg", HandleUpdateFromBgg)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -798,7 +805,11 @@ internal static class SharedGameCatalogEndpoints
             request.ThumbnailUrl,
             request.Rules,
             userId,
-            request.BggId);
+            request.BggId,
+            request.Categories,
+            request.Mechanics,
+            request.Designers,
+            request.Publishers);
 
         var gameId = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Created($"/api/v1/shared-games/{gameId}", gameId);
@@ -1104,6 +1115,14 @@ internal static class SharedGameCatalogEndpoints
     {
         var query = new CheckBggDuplicateQuery(bggId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetDistinctMetadata(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetDistinctMetadataQuery(), ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
@@ -3026,7 +3045,11 @@ internal record CreateSharedGameRequest(
     string ImageUrl,
     string ThumbnailUrl,
     GameRulesDto? Rules,
-    int? BggId);
+    int? BggId,
+    List<string>? Categories = null,
+    List<string>? Mechanics = null,
+    List<string>? Designers = null,
+    List<string>? Publishers = null);
 
 /// <summary>
 /// Request DTO for updating a shared game.
