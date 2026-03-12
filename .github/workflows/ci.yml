@@ -172,12 +172,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-docker-
 
-      - name: Pull Test Container Images
-        run: |
-          echo "📦 Pulling test container images for cache..."
-          docker pull pgvector/pgvector:pg16 || true  # Issue #3547: Use pgvector image
-          docker pull redis:7-alpine || true
-          echo "✅ Test images pulled and cached"
+      # Note: Test container images (pgvector, redis) are already pulled by the services: block above.
+      # Removed redundant docker pull step that added 30-60s per CI run.
 
       - name: Pre-Test Cleanup
         shell: bash
@@ -206,16 +202,14 @@ jobs:
           echo "✅ Redis ready"
 
           echo "⏳ Waiting for Qdrant..."
-          # Health check configured with 150s retries (30×5s)
-          # Manual wait as backup with extended timeout (120s)
-          for i in {1..60}; do
+          # Services block has 30 retries × 5s health check — just verify it's reachable
+          for i in {1..15}; do
             if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant ready"
-              exit 0
+              break
             fi
             sleep 2
           done
-          echo "⚠️ Qdrant health check timeout - relying on container health check"
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
@@ -449,7 +443,6 @@ jobs:
         run: |
           dotnet run --no-build --configuration Release --no-launch-profile &
           echo $! > api.pid
-          sleep 15
         env:
           ASPNETCORE_ENVIRONMENT: Testing
           ASPNETCORE_URLS: "http://localhost:8080"
@@ -462,9 +455,20 @@ jobs:
           QDRANT_URL: "http://localhost:6333"
           OPENROUTER_API_KEY: "test-key-for-ci-placeholder"
 
-      - name: Backend Health Check
+      - name: Wait for API Health
         working-directory: .
-        run: curl --retry 10 --retry-delay 3 --retry-max-time 60 http://localhost:8080/health
+        timeout-minutes: 2
+        run: |
+          echo "⏳ Waiting for API to be healthy..."
+          for i in {1..40}; do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "✅ API healthy after ~$((i*3))s"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "❌ API failed to start within 2 minutes"
+          exit 1
 
       # ===== Frontend Setup =====
       - name: Setup Frontend
