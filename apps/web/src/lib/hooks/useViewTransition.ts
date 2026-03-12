@@ -9,7 +9,7 @@ export function useViewTransition() {
 
   const navigateWithTransition = useCallback(
     (href: string) => {
-      if (!document.startViewTransition) {
+      if (typeof document.startViewTransition !== 'function') {
         router.push(href);
         return;
       }

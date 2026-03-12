@@ -244,43 +244,58 @@ export function MeepleLibraryGameCard({
   // Quick Actions Configuration
   // ============================================================================
 
-  const entityQuickActions = [
-    {
-      icon: MessageCircle,
-      label: 'Chat con Agent',
-      onClick: () => {
-        window.location.href = `/chat/new?game=${game.gameId}`;
+  const entityQuickActions = useMemo(
+    () => [
+      {
+        icon: MessageCircle,
+        label: 'Chat con Agent',
+        onClick: () => {
+          window.location.href = `/chat/new?game=${game.gameId}`;
+        },
+        // Show whenever hasKb is true; always clickable so the chat page can handle agent selection
+        hidden: !game.hasKb,
       },
-      // Show whenever hasKb is true; always clickable so the chat page can handle agent selection
-      hidden: !game.hasKb,
-    },
-    {
-      icon: Settings,
-      label: 'Configura Agent',
-      onClick: () => onConfigureAgent(game.gameId, game.gameTitle),
-    },
-    {
-      icon: Upload,
-      label: 'Carica PDF',
-      onClick: () => onUploadPdf(game.gameId, game.gameTitle),
-    },
-    {
-      icon: Edit2,
-      label: 'Modifica Note',
-      onClick: () => onEditNotes(game.gameId, game.gameTitle, game.notes),
-    },
-    {
-      icon: Heart,
-      label: game.isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti',
-      onClick: handleToggleFavorite,
-      disabled: isTogglingFavorite,
-    },
-    {
-      icon: Trash2,
-      label: 'Rimuovi dalla Libreria',
-      onClick: () => onRemove(game.gameId, game.gameTitle),
-    },
-  ];
+      {
+        icon: Settings,
+        label: 'Configura Agent',
+        onClick: () => onConfigureAgent(game.gameId, game.gameTitle),
+      },
+      {
+        icon: Upload,
+        label: 'Carica PDF',
+        onClick: () => onUploadPdf(game.gameId, game.gameTitle),
+      },
+      {
+        icon: Edit2,
+        label: 'Modifica Note',
+        onClick: () => onEditNotes(game.gameId, game.gameTitle, game.notes),
+      },
+      {
+        icon: Heart,
+        label: game.isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti',
+        onClick: handleToggleFavorite,
+        disabled: isTogglingFavorite,
+      },
+      {
+        icon: Trash2,
+        label: 'Rimuovi dalla Libreria',
+        onClick: () => onRemove(game.gameId, game.gameTitle),
+      },
+    ],
+    [
+      game.gameId,
+      game.gameTitle,
+      game.hasKb,
+      game.isFavorite,
+      game.notes,
+      handleToggleFavorite,
+      isTogglingFavorite,
+      onConfigureAgent,
+      onUploadPdf,
+      onEditNotes,
+      onRemove,
+    ]
+  );
 
   // ============================================================================
   // Metadata Configuration

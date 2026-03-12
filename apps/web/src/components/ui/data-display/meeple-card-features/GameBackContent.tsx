@@ -216,10 +216,15 @@ export const GameBackContent = React.memo(function GameBackContent({
           )}
           {complexityDots != null && (
             <InfoChip>
-              <span className="inline-flex gap-0.5" data-testid="complexity-dots">
+              <span
+                className="inline-flex gap-0.5"
+                data-testid="complexity-dots"
+                aria-label={`Complessità: ${complexityDots} su 5`}
+              >
                 {Array.from({ length: 5 }, (_, i) => (
                   <span
                     key={i}
+                    aria-hidden="true"
                     className={cn(
                       'rounded-full w-2 h-2',
                       i < complexityDots ? 'bg-current' : 'bg-current/20'
