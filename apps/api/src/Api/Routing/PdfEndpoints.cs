@@ -795,7 +795,7 @@ internal static class PdfEndpoints
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session!.User!.Id;
 
-        var result = await mediator.Send(new AcceptCopyrightDisclaimerCommand(pdfId, userId), ct).ConfigureAwait(false);
+        var result = await mediator.Send(new AcceptCopyrightDisclaimerCommand(userId, pdfId), ct).ConfigureAwait(false);
 
         return Results.Ok(new { success = result.Success, message = result.Message });
     }

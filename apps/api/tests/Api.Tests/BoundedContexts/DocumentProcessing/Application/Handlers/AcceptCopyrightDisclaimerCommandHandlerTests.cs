@@ -49,7 +49,7 @@ public class AcceptCopyrightDisclaimerCommandHandlerTests
             .Setup(r => r.GetByIdAsync(pdf.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pdf);
 
-        var command = new AcceptCopyrightDisclaimerCommand(pdf.Id, userId);
+        var command = new AcceptCopyrightDisclaimerCommand(userId, pdf.Id);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -57,7 +57,7 @@ public class AcceptCopyrightDisclaimerCommandHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue();
-        result.PdfId.Should().Be(pdf.Id);
+        result.PdfDocumentId.Should().Be(pdf.Id);
         pdf.HasAcceptedDisclaimer.Should().BeTrue();
         pdf.CopyrightDisclaimerAcceptedBy.Should().Be(userId);
         pdf.CopyrightDisclaimerAcceptedAt.Should().NotBeNull();
@@ -77,7 +77,7 @@ public class AcceptCopyrightDisclaimerCommandHandlerTests
             .Setup(r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?)null);
 
-        var command = new AcceptCopyrightDisclaimerCommand(pdfId, userId);
+        var command = new AcceptCopyrightDisclaimerCommand(userId, pdfId);
 
         // Act
         var act = async () => await _handler.Handle(command, CancellationToken.None);
@@ -105,7 +105,7 @@ public class AcceptCopyrightDisclaimerCommandHandlerTests
             .Setup(r => r.GetByIdAsync(pdf.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pdf);
 
-        var command = new AcceptCopyrightDisclaimerCommand(pdf.Id, requestingUserId);
+        var command = new AcceptCopyrightDisclaimerCommand(requestingUserId, pdf.Id);
 
         // Act
         var act = async () => await _handler.Handle(command, CancellationToken.None);
@@ -134,7 +134,7 @@ public class AcceptCopyrightDisclaimerCommandHandlerTests
             .Setup(r => r.GetByIdAsync(pdf.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pdf);
 
-        var command = new AcceptCopyrightDisclaimerCommand(pdf.Id, userId);
+        var command = new AcceptCopyrightDisclaimerCommand(userId, pdf.Id);
 
         // Act
         var act = async () => await _handler.Handle(command, CancellationToken.None);

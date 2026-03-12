@@ -11,7 +11,7 @@ internal sealed class AcceptCopyrightDisclaimerCommandValidator : AbstractValida
 {
     public AcceptCopyrightDisclaimerCommandValidator()
     {
-        RuleFor(x => x.PdfId)
+        RuleFor(x => x.PdfDocumentId)
             .NotEmpty()
             .WithMessage("PDF document ID is required.");
 

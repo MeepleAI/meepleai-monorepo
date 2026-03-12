@@ -30,16 +30,16 @@ internal sealed class AcceptCopyrightDisclaimerCommandHandler : ICommandHandler<
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var pdf = await _pdfRepository.GetByIdAsync(command.PdfId, cancellationToken).ConfigureAwait(false);
+        var pdf = await _pdfRepository.GetByIdAsync(command.PdfDocumentId, cancellationToken).ConfigureAwait(false);
 
         if (pdf is null)
-            throw new NotFoundException("PdfDocument", command.PdfId.ToString());
+            throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
 
         if (pdf.UploadedByUserId != command.UserId)
         {
             _logger.LogWarning(
                 "User {UserId} attempted to accept disclaimer for PDF {PdfId} owned by {OwnerId}",
-                command.UserId, command.PdfId, pdf.UploadedByUserId);
+                command.UserId, command.PdfDocumentId, pdf.UploadedByUserId);
             throw new ForbiddenException("You do not have permission to accept the disclaimer for this PDF document");
         }
 
@@ -53,11 +53,11 @@ internal sealed class AcceptCopyrightDisclaimerCommandHandler : ICommandHandler<
 
         _logger.LogInformation(
             "Copyright disclaimer accepted for PDF {PdfId} by user {UserId}",
-            command.PdfId, command.UserId);
+            command.PdfDocumentId, command.UserId);
 
         return new AcceptCopyrightDisclaimerResult(
             Success: true,
             Message: "Copyright disclaimer accepted",
-            PdfId: command.PdfId);
+            PdfDocumentId: command.PdfDocumentId);
     }
 }

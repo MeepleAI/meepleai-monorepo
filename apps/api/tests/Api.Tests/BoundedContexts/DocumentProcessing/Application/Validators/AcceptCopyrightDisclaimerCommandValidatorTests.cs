@@ -36,24 +36,24 @@ public class AcceptCopyrightDisclaimerCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_WithEmptyPdfId_FailsValidation()
+    public void Validate_WithEmptyPdfDocumentId_FailsValidation()
     {
-        // Arrange
-        var command = new AcceptCopyrightDisclaimerCommand(Guid.Empty, Guid.NewGuid());
+        // Arrange — UserId valid, PdfDocumentId empty
+        var command = new AcceptCopyrightDisclaimerCommand(Guid.NewGuid(), Guid.Empty);
 
         // Act
         var result = _validator.TestValidate(command);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.PdfId)
+        result.ShouldHaveValidationErrorFor(x => x.PdfDocumentId)
             .WithErrorMessage("PDF document ID is required.");
     }
 
     [Fact]
     public void Validate_WithEmptyUserId_FailsValidation()
     {
-        // Arrange
-        var command = new AcceptCopyrightDisclaimerCommand(Guid.NewGuid(), Guid.Empty);
+        // Arrange — UserId empty, PdfDocumentId valid
+        var command = new AcceptCopyrightDisclaimerCommand(Guid.Empty, Guid.NewGuid());
 
         // Act
         var result = _validator.TestValidate(command);
@@ -73,7 +73,7 @@ public class AcceptCopyrightDisclaimerCommandValidatorTests
         var result = _validator.TestValidate(command);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.PdfId);
+        result.ShouldHaveValidationErrorFor(x => x.PdfDocumentId);
         result.ShouldHaveValidationErrorFor(x => x.UserId);
         result.Errors.Should().HaveCount(2);
     }
