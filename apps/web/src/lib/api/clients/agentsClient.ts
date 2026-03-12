@@ -34,6 +34,11 @@ import {
   type Typology, // Added for AGT-012
 } from '../schemas';
 
+import {
+  AgentCostEstimateSchema,
+  type AgentCostEstimate,
+} from '../schemas/rag-setup.schemas';
+
 import type { HttpClient } from '../core/httpClient';
 import type {
   BackendModelDto,
@@ -41,10 +46,6 @@ import type {
   BackendAgentConfigurationDto,
   UpdateAgentConfigurationRequest,
 } from '../schemas/agent-config.schemas';
-import {
-  AgentCostEstimateSchema,
-  type AgentCostEstimate,
-} from '../schemas/rag-setup.schemas';
 
 export interface CreateAgentsClientParams {
   httpClient: HttpClient;
