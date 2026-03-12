@@ -75,7 +75,7 @@ function UptimeBadge({ percent }: { percent: number }) {
 
 function TrendIndicator({
   trend,
-  currentMs,
+  currentMs: _currentMs,
   previousMs,
 }: {
   trend: 'up' | 'down' | 'stable';

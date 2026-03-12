@@ -13,7 +13,7 @@ import { ChevronRight, Home } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { buildBreadcrumbs, type BreadcrumbItem } from '@/lib/breadcrumb-utils';
+import { buildBreadcrumbs } from '@/lib/breadcrumb-utils';
 import { cn } from '@/lib/utils';
 
 // ─── Component ────────────────────────────────────────────────────────────────

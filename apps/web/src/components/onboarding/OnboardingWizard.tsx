@@ -38,7 +38,7 @@ interface WizardState {
 
 const STEP_LABELS = ['Password', 'Profile', 'Interests', 'First Game', 'First Agent'];
 
-export function OnboardingWizard({ token, role }: OnboardingWizardProps) {
+export function OnboardingWizard({ token, role: _role }: OnboardingWizardProps) {
   const router = useRouter();
   const [state, setState] = useState<WizardState>({
     currentStep: 1,
