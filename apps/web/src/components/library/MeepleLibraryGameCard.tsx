@@ -287,8 +287,8 @@ export function MeepleLibraryGameCard({
   // ============================================================================
 
   const metadata: MeepleCardMetadata[] = [
-    { icon: Gamepad2, value: formatPlayCount(0) }, // TODO: Add play count from game data
-    { icon: Trophy, value: formatWinRate(null) }, // TODO: Add win rate from game data
+    { icon: Gamepad2, value: formatPlayCount(0) }, // TODO: wire from game detail/sessions data
+    { icon: Trophy, value: formatWinRate(null) }, // TODO: wire from game detail/sessions data
   ];
 
   // Add agent status if configured
@@ -338,7 +338,7 @@ export function MeepleLibraryGameCard({
       minPlayers: game.minPlayers,
       maxPlayers: game.maxPlayers,
       averageRating: game.averageRating,
-      timesPlayed: 0, // TODO: wire from game data when available
+      timesPlayed: 0, // TODO: wire from game detail/sessions API when available
       hasKb: game.hasKb,
       kbCardCount: game.kbCardCount,
       kbDocuments: kbDocuments?.map(d => ({
