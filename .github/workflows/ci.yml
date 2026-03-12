@@ -530,12 +530,17 @@ jobs:
     steps:
       - name: Check Status
         run: |
-          if [ "${{ needs.frontend.result }}" == "failure" ] || \
-             [ "${{ needs.backend-unit.result }}" == "failure" ] || \
-             [ "${{ needs.backend-integration.result }}" == "failure" ] || \
-             [ "${{ needs.python-tests.result }}" == "failure" ] || \
-             [ "${{ needs.e2e.result }}" == "failure" ]; then
-            echo "❌ CI Failed"
-            exit 1
-          fi
+          for job in frontend backend-unit backend-integration python-tests e2e; do
+            result="${{ needs.frontend.result }}"
+            case "$job" in
+              backend-unit) result="${{ needs.backend-unit.result }}" ;;
+              backend-integration) result="${{ needs.backend-integration.result }}" ;;
+              python-tests) result="${{ needs.python-tests.result }}" ;;
+              e2e) result="${{ needs.e2e.result }}" ;;
+            esac
+            if [ "$result" == "failure" ] || [ "$result" == "cancelled" ]; then
+              echo "❌ CI Failed: $job=$result"
+              exit 1
+            fi
+          done
           echo "✅ CI Passed"
