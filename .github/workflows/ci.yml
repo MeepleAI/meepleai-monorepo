@@ -260,7 +260,7 @@ jobs:
       # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
       # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
       - name: Run Integration Tests
-        timeout-minutes: 90
+        timeout-minutes: 45
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -274,14 +274,20 @@ jobs:
           CI: true
           # Issue #3102: Disable rate limiting middleware for integration tests to prevent 429 errors
           DISABLE_RATE_LIMITING: "true"
+          # Issue #CI-Optimization: Pass external service URLs so SharedTestcontainersFixture
+          # skips container startup and uses CI service containers directly
+          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
+          TEST_REDIS_CONNSTRING: localhost:6379
         run: |
-          echo "🧪 Running integration tests..."
+          echo "🧪 Running integration tests (4 parallel collection groups)..."
           dotnet test \
             --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent" \
+            --settings tests/Api.Tests/integration.runsettings \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \
-            --blame-hang-timeout 15min \
+            --blame-hang-timeout 5min \
+            --blame-hang-dump-type mini \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
             -p:CoverletOutput=./coverage/integration-coverage.xml
