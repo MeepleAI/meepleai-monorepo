@@ -85,8 +85,13 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             var key = BuildRedisKey(userId, action);
             var ttl = GetTtlForAction(action);
 
-            await db.StringIncrementAsync(key, 1).ConfigureAwait(false);
-            await db.KeyExpireAsync(key, ttl).ConfigureAwait(false);
+            var newValue = await db.StringIncrementAsync(key, 1).ConfigureAwait(false);
+
+            // Only set TTL on key creation (first increment = 1) to avoid resetting expiry on every usage
+            if (newValue == 1)
+            {
+                await db.KeyExpireAsync(key, ttl).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {

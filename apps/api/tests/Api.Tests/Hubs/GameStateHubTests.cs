@@ -19,6 +19,7 @@ public class GameStateHubTests
     private readonly GameStateHub _hub;
 
     private const string TestSessionId = "session-123";
+    private const string TestSessionGroup = $"session:{TestSessionId}";
     private const string TestConnectionId = "conn-abc";
     private const string TestParticipantId = "user-456";
 
@@ -56,10 +57,10 @@ public class GameStateHubTests
 
         // Assert
         _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, TestSessionId, default),
+            g => g.AddToGroupAsync(TestConnectionId, TestSessionGroup, default),
             Times.Once);
         _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, $"{TestSessionId}:host", default),
+            g => g.AddToGroupAsync(TestConnectionId, $"{TestSessionGroup}:host", default),
             Times.Once);
     }
 
@@ -76,10 +77,10 @@ public class GameStateHubTests
 
         // Assert
         _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, TestSessionId, default),
+            g => g.AddToGroupAsync(TestConnectionId, TestSessionGroup, default),
             Times.Once);
         _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, $"{TestSessionId}:host", default),
+            g => g.AddToGroupAsync(TestConnectionId, $"{TestSessionGroup}:host", default),
             Times.Once);
     }
 
@@ -96,10 +97,10 @@ public class GameStateHubTests
 
         // Assert
         _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, TestSessionId, default),
+            g => g.AddToGroupAsync(TestConnectionId, TestSessionGroup, default),
             Times.Once);
         _mockGroups.Verify(
-            g => g.AddToGroupAsync(TestConnectionId, $"{TestSessionId}:host", default),
+            g => g.AddToGroupAsync(TestConnectionId, $"{TestSessionGroup}:host", default),
             Times.Never);
     }
 
@@ -111,7 +112,7 @@ public class GameStateHubTests
         // Arrange
         var proposal = new { playerId = "p1", score = 42 };
         _mockClients
-            .Setup(c => c.Group($"{TestSessionId}:host"))
+            .Setup(c => c.Group($"{TestSessionGroup}:host"))
             .Returns(_mockClientProxy.Object);
         _mockClientProxy
             .Setup(p => p.SendCoreAsync("ScoreProposed", It.IsAny<object?[]>(), default))
@@ -121,7 +122,7 @@ public class GameStateHubTests
         await _hub.ProposeScore(TestSessionId, proposal);
 
         // Assert
-        _mockClients.Verify(c => c.Group($"{TestSessionId}:host"), Times.Once);
+        _mockClients.Verify(c => c.Group($"{TestSessionGroup}:host"), Times.Once);
         _mockClientProxy.Verify(
             p => p.SendCoreAsync("ScoreProposed", It.Is<object?[]>(args => args[0] == (object)proposal), default),
             Times.Once);
@@ -133,7 +134,7 @@ public class GameStateHubTests
         // Arrange
         var proposal = new { playerId = "p1", score = 42 };
         _mockClients
-            .Setup(c => c.Group($"{TestSessionId}:host"))
+            .Setup(c => c.Group($"{TestSessionGroup}:host"))
             .Returns(_mockClientProxy.Object);
         _mockClientProxy
             .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object?[]>(), default))
@@ -142,8 +143,8 @@ public class GameStateHubTests
         // Act
         await _hub.ProposeScore(TestSessionId, proposal);
 
-        // Assert — never calls Group(sessionId) without ":host" suffix
-        _mockClients.Verify(c => c.Group(TestSessionId), Times.Never);
+        // Assert — never calls Group(sessionGroup) without ":host" suffix
+        _mockClients.Verify(c => c.Group(TestSessionGroup), Times.Never);
     }
 
     // ── ConfirmScore ──
@@ -154,7 +155,7 @@ public class GameStateHubTests
         // Arrange
         var confirmation = new { playerId = "p1", score = 42, confirmed = true };
         _mockClients
-            .Setup(c => c.Group(TestSessionId))
+            .Setup(c => c.Group(TestSessionGroup))
             .Returns(_mockClientProxy.Object);
         _mockClientProxy
             .Setup(p => p.SendCoreAsync("ScoreConfirmed", It.IsAny<object?[]>(), default))
@@ -164,7 +165,7 @@ public class GameStateHubTests
         await _hub.ConfirmScore(TestSessionId, confirmation);
 
         // Assert
-        _mockClients.Verify(c => c.Group(TestSessionId), Times.Once);
+        _mockClients.Verify(c => c.Group(TestSessionGroup), Times.Once);
         _mockClientProxy.Verify(
             p => p.SendCoreAsync("ScoreConfirmed", It.Is<object?[]>(args => args[0] == (object)confirmation), default),
             Times.Once);

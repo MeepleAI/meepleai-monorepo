@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 
 /// <summary>
@@ -66,8 +68,8 @@ public class SessionParticipant
 
     private static string GeneratePin()
     {
-        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous O/0/I/1/l
-        return new string(Enumerable.Range(0, 6)
-            .Select(_ => chars[Random.Shared.Next(chars.Length)]).ToArray());
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous O/0/I/1/l (32 chars = zero modulo bias from byte % 32)
+        return new string(RandomNumberGenerator.GetBytes(6)
+            .Select(b => chars[b % chars.Length]).ToArray());
     }
 }

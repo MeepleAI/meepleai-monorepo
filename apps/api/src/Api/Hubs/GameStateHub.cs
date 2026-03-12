@@ -132,11 +132,12 @@ public class GameStateHub : Hub
     /// </summary>
     public async Task JoinSessionWithRole(string sessionId, string role)
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, sessionId).ConfigureAwait(false);
+        var group = GetSessionGroup(sessionId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, group).ConfigureAwait(false);
 
         if (string.Equals(role, "host", StringComparison.OrdinalIgnoreCase))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"{sessionId}:host").ConfigureAwait(false);
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"{group}:host").ConfigureAwait(false);
         }
 
         _logger.LogInformation(
@@ -153,7 +154,7 @@ public class GameStateHub : Hub
     /// </summary>
     public async Task ProposeScore(string sessionId, object proposal)
     {
-        await Clients.Group($"{sessionId}:host")
+        await Clients.Group($"{GetSessionGroup(sessionId)}:host")
             .SendAsync("ScoreProposed", proposal).ConfigureAwait(false);
 
         _logger.LogDebug(
@@ -168,7 +169,7 @@ public class GameStateHub : Hub
     /// </summary>
     public async Task ConfirmScore(string sessionId, object confirmation)
     {
-        await Clients.Group(sessionId)
+        await Clients.Group(GetSessionGroup(sessionId))
             .SendAsync("ScoreConfirmed", confirmation).ConfigureAwait(false);
 
         _logger.LogInformation(
