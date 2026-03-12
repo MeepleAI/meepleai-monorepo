@@ -71,5 +71,3 @@ public class SessionParticipant
             .Select(_ => chars[Random.Shared.Next(chars.Length)]).ToArray());
     }
 }
-
-public enum ParticipantRole { Host, Player, Spectator }
