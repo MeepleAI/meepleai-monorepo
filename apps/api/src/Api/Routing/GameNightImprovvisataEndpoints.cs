@@ -54,11 +54,7 @@ internal static class GameNightImprovvisataEndpoints
         [FromServices] IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var searchTerm = q ?? string.Empty;
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 20;
-
-        var query = new SearchBggGamesForGameNightQuery(searchTerm, page, pageSize);
+        var query = new SearchBggGamesForGameNightQuery(q ?? string.Empty, page, pageSize);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

@@ -33,7 +33,7 @@ internal sealed class AcceptCopyrightDisclaimerCommandHandler : ICommandHandler<
         var pdf = await _pdfRepository.GetByIdAsync(command.PdfId, cancellationToken).ConfigureAwait(false);
 
         if (pdf is null)
-            throw new NotFoundException($"PDF document {command.PdfId} not found");
+            throw new NotFoundException("PdfDocument", command.PdfId.ToString());
 
         if (pdf.UploadedByUserId != command.UserId)
         {

@@ -130,6 +130,8 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler
             agentName = agentName[..100];
 
         var agentDescription = $"AI assistant for {privateGame.Title}";
+        if (agentDescription.Length > 1000)
+            agentDescription = agentDescription[..1000];
 
         var agent = AgentDefinition.Create(
             name: agentName,
