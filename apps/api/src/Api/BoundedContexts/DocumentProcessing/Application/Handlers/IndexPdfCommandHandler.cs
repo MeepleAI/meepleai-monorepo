@@ -128,6 +128,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             try
             {
                 var failedPdf = await _db.PdfDocuments
+                    .AsTracking()
                     .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, CancellationToken.None).ConfigureAwait(false);
                 if (failedPdf != null)
                 {
@@ -155,8 +156,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         string pdfId,
         CancellationToken cancellationToken)
     {
-        // Retrieve PDF document
+        // Retrieve PDF document with tracking enabled (global NoTracking default must be overridden)
         var pdf = await _db.PdfDocuments
+            .AsTracking()
             .Include(p => p.Game)
             .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, cancellationToken).ConfigureAwait(false);
 
