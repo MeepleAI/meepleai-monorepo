@@ -34,8 +34,16 @@ public record TierLimits
             throw new ArgumentException("Cannot be negative", nameof(maxPdfSizeBytes));
         if (maxAgents < 0)
             throw new ArgumentException("Cannot be negative", nameof(maxAgents));
+        if (maxAgentQueriesPerDay < 0)
+            throw new ArgumentException("Cannot be negative", nameof(maxAgentQueriesPerDay));
+        if (maxSessionQueries < 0)
+            throw new ArgumentException("Cannot be negative", nameof(maxSessionQueries));
         if (maxSessionPlayers < 1)
             throw new ArgumentException("Must be at least 1", nameof(maxSessionPlayers));
+        if (maxPhotosPerSession < 0)
+            throw new ArgumentException("Cannot be negative", nameof(maxPhotosPerSession));
+        if (maxCatalogProposalsPerWeek < 0)
+            throw new ArgumentException("Cannot be negative", nameof(maxCatalogProposalsPerWeek));
 
         return new TierLimits
         {

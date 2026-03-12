@@ -104,6 +104,38 @@ public sealed class TierLimitsTests
             .WithParameterName("maxSessionPlayers");
     }
 
+    [Fact]
+    public void Create_WithNegativeMaxAgentQueriesPerDay_ThrowsArgumentException()
+    {
+        var act = () => TierLimits.Create(0, 0, 0, 0, -1, 0, 1, 0, false, 0);
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("maxAgentQueriesPerDay");
+    }
+
+    [Fact]
+    public void Create_WithNegativeMaxSessionQueries_ThrowsArgumentException()
+    {
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, -1, 1, 0, false, 0);
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("maxSessionQueries");
+    }
+
+    [Fact]
+    public void Create_WithNegativeMaxPhotosPerSession_ThrowsArgumentException()
+    {
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 0, 1, -1, false, 0);
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("maxPhotosPerSession");
+    }
+
+    [Fact]
+    public void Create_WithNegativeMaxCatalogProposalsPerWeek_ThrowsArgumentException()
+    {
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 0, 1, 0, false, -1);
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("maxCatalogProposalsPerWeek");
+    }
+
     #endregion
 
     #region Preset Tests
