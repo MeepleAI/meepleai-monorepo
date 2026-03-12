@@ -96,21 +96,26 @@ function ContextualAction({
 }: {
   icon: typeof Play;
   label: string;
-  context?: string;
+  context?: string | null;
   colorHsl: string;
   onClick?: () => void;
 }) {
   return (
     <button
       type="button"
-      className="flex items-center gap-2 w-full rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-muted/50"
+      className="flex items-center gap-2 w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors"
+      style={{
+        backgroundColor: `hsla(${colorHsl}, 0.08)`,
+        borderColor: `hsla(${colorHsl}, 0.15)`,
+        color: `hsl(${colorHsl})`,
+      }}
       onClick={e => {
         e.stopPropagation();
         onClick?.();
       }}
     >
-      <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: `hsl(${colorHsl})` }} />
-      <span className="font-medium text-card-foreground">{label}</span>
+      <Icon className="w-4 h-4 shrink-0" />
+      <span>{label}</span>
       {context && <span className="ml-auto text-[10px] text-muted-foreground">{context}</span>}
     </button>
   );
@@ -161,10 +166,10 @@ export const GameBackContent = React.memo(function GameBackContent({
   const complexityDots = complexityRating != null ? Math.round(complexityRating) : null;
 
   const kbContextLabel = hasKb
-    ? kbCardCount > 0
-      ? `KB pronta · ${kbCardCount} doc`
-      : 'KB in elaborazione'
-    : null;
+    ? `KB pronta · ${kbCardCount} doc`
+    : data.kbDocuments?.some(d => d.status !== 'Ready')
+      ? 'KB in elaborazione'
+      : 'Nessuna KB';
 
   const timesPlayedContext = timesPlayed > 0 ? `${timesPlayed} partite giocate` : 'Nessuna partita';
 
@@ -232,13 +237,6 @@ export const GameBackContent = React.memo(function GameBackContent({
           )}
         </div>
 
-        {/* KB context label */}
-        {kbContextLabel && (
-          <p className="text-[10px] text-muted-foreground" data-testid="kb-context-label">
-            {kbContextLabel}
-          </p>
-        )}
-
         {/* Contextual actions */}
         {actions && (
           <div className="flex flex-col gap-0.5" data-testid="game-back-actions">
@@ -255,8 +253,8 @@ export const GameBackContent = React.memo(function GameBackContent({
               <ContextualAction
                 icon={Bot}
                 label="Chiedi all'AI"
-                context={kbContextLabel ?? undefined}
-                colorHsl="270 60% 50%"
+                context={kbContextLabel}
+                colorHsl="262 83% 58%"
                 onClick={actions.onChatAgent}
               />
             )}
@@ -264,7 +262,8 @@ export const GameBackContent = React.memo(function GameBackContent({
               <ContextualAction
                 icon={Calendar}
                 label="Aggiungi a serata"
-                colorHsl="210 80% 50%"
+                context={data.nextGameNight ?? undefined}
+                colorHsl="217 91% 60%"
                 onClick={actions.onAddToGameNight}
               />
             )}
@@ -272,8 +271,8 @@ export const GameBackContent = React.memo(function GameBackContent({
               <ContextualAction
                 icon={Link2}
                 label="Espansioni"
-                context={`${entityLinkCount}`}
-                colorHsl="142 70% 40%"
+                context={`${entityLinkCount} collegate`}
+                colorHsl="142 70% 45%"
                 onClick={actions.onViewLinks}
               />
             )}

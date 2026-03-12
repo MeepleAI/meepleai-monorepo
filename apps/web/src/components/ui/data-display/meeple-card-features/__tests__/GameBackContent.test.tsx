@@ -206,9 +206,10 @@ describe('ContextualActions', () => {
     expect(screen.getByText('12 partite giocate')).toBeInTheDocument();
   });
 
-  it('shows Espansioni when entityLinkCount > 0', () => {
+  it('shows Espansioni with "N collegate" context when entityLinkCount > 0', () => {
     renderComponent({ entityLinkCount: 3 });
     expect(screen.getByText('Espansioni')).toBeInTheDocument();
+    expect(screen.getByText('3 collegate')).toBeInTheDocument();
   });
 
   it('hides Espansioni when entityLinkCount is 0', () => {
@@ -216,9 +217,10 @@ describe('ContextualActions', () => {
     expect(screen.queryByText('Espansioni')).not.toBeInTheDocument();
   });
 
-  it('shows Aggiungi a serata when onAddToGameNight is provided', () => {
-    renderComponent({}, { onAddToGameNight: vi.fn() });
+  it('shows Aggiungi a serata with nextGameNight context', () => {
+    renderComponent({ nextGameNight: 'Sab 21:00' }, { onAddToGameNight: vi.fn() });
     expect(screen.getByText('Aggiungi a serata')).toBeInTheDocument();
+    expect(screen.getByText('Sab 21:00')).toBeInTheDocument();
   });
 
   it('hides Aggiungi a serata when onAddToGameNight is undefined', () => {
@@ -228,30 +230,31 @@ describe('ContextualActions', () => {
 });
 
 // ============================================================================
-// KB Context Label
+// KB Context in Chiedi all'AI action
 // ============================================================================
 
-describe('KB Context Label', () => {
+describe('KB Context in ContextualAction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('shows "KB pronta · N doc" when hasKb and kbCardCount > 0', () => {
+  it('shows "KB pronta · N doc" as context when hasKb is true', () => {
     renderComponent({ hasKb: true, kbCardCount: 5 });
-    const label = screen.getByTestId('kb-context-label');
-    expect(label).toHaveTextContent('KB pronta · 5 doc');
+    expect(screen.getByText('KB pronta · 5 doc')).toBeInTheDocument();
   });
 
-  it('shows "KB in elaborazione" when hasKb but kbCardCount is 0', () => {
-    renderComponent({ hasKb: true, kbCardCount: 0 });
-    const label = screen.getByTestId('kb-context-label');
-    expect(label).toHaveTextContent('KB in elaborazione');
+  it('shows "KB in elaborazione" when hasKb is false and docs are processing', () => {
+    renderComponent({
+      hasKb: false,
+      kbCardCount: 0,
+      kbDocuments: [{ id: '1', fileName: 'rules.pdf', status: 'Processing' }],
+    });
+    expect(screen.getByText('KB in elaborazione')).toBeInTheDocument();
   });
 
-  it('does not show KB label when hasKb is false', () => {
-    renderComponent({ hasKb: false, kbCardCount: 0 });
-    expect(screen.queryByText(/KB pronta/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/KB in elaborazione/)).not.toBeInTheDocument();
+  it('shows "Nessuna KB" when hasKb is false and no processing docs', () => {
+    renderComponent({ hasKb: false, kbCardCount: 0, kbDocuments: [] });
+    expect(screen.getByText('Nessuna KB')).toBeInTheDocument();
   });
 });
 
