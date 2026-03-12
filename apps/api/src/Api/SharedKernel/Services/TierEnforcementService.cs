@@ -105,7 +105,9 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         var photosThisSession = await GetRedisCounterAsync(userId, TierAction.UploadSessionPhoto).ConfigureAwait(false);
         var catalogProposals = await GetRedisCounterAsync(userId, TierAction.ProposeToSharedCatalog).ConfigureAwait(false);
 
-        // Count-based from DB (simplified — in production would use actual queries)
+        // Phase 2 scope: replace with SQL COUNT via IGameRepository.CountUserGamesAsync(userId)
+        // and IAgentRepository.CountUserAgentsAsync(userId) when the tier CQRS layer is added.
+        // Hardcoded to 0 for now — count-based enforcement is not yet wired.
         var privateGames = 0;
         var agents = 0;
 
