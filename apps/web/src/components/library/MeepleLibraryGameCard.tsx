@@ -367,21 +367,13 @@ export function MeepleLibraryGameCard({
             window.location.href = `/chat/new?game=${game.gameId}`;
           }
         : undefined,
-      onViewKb: () => setKbDrawerOpen(true),
-      onEditNotes: () => onEditNotes(game.gameId, game.gameTitle, game.notes),
       onToggleFavorite: handleToggleFavorite,
       isFavorite: game.isFavorite,
+      onNewSession: () => {
+        window.location.href = `/library/games/${game.gameId}/sessions/new`;
+      },
     };
-  }, [
-    flippable,
-    game.hasKb,
-    game.gameId,
-    game.gameTitle,
-    game.notes,
-    game.isFavorite,
-    handleToggleFavorite,
-    onEditNotes,
-  ]);
+  }, [flippable, game.hasKb, game.gameId, game.isFavorite, handleToggleFavorite]);
 
   // ============================================================================
   // Render
