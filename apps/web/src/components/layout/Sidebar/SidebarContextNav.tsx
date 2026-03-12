@@ -34,6 +34,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { GamesFilterPanel } from '@/components/catalog/GamesFilterPanel';
+import { useViewTransition } from '@/lib/hooks/useViewTransition';
 import { cn } from '@/lib/utils';
 
 import type { Variants } from 'framer-motion';
@@ -61,9 +62,15 @@ function SidebarLink({
   isActive?: boolean;
   isCollapsed: boolean;
 }) {
+  const { navigateWithTransition } = useViewTransition();
+
   return (
     <Link
       href={href}
+      onClick={e => {
+        e.preventDefault();
+        navigateWithTransition(href);
+      }}
       className={cn(
         'group relative flex items-center gap-3 rounded-lg text-sm font-medium',
         'min-h-[44px] px-3 py-2',
