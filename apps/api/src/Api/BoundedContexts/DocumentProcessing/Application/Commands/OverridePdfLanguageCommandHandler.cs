@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -34,7 +35,7 @@ internal sealed class OverridePdfLanguageCommandHandler : ICommandHandler<Overri
         if (pdf is null)
         {
             _logger.LogWarning("PDF {PdfId} not found when overriding language", command.PdfId);
-            throw new KeyNotFoundException($"PDF document with ID {command.PdfId} not found");
+            throw new NotFoundException("PdfDocument", command.PdfId.ToString());
         }
 
         pdf.OverrideLanguage(command.LanguageCode);

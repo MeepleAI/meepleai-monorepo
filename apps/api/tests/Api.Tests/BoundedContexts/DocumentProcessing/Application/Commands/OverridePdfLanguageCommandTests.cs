@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Validators;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -119,7 +120,7 @@ public class OverridePdfLanguageCommandTests
     }
 
     [Fact]
-    public async Task Handle_WhenPdfNotFound_ThrowsKeyNotFoundException()
+    public async Task Handle_WhenPdfNotFound_ThrowsNotFoundException()
     {
         // Arrange
         var (pdfRepoMock, uowMock, loggerMock) = CreateMocks();
@@ -138,7 +139,7 @@ public class OverridePdfLanguageCommandTests
         Func<Task> act = () => handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<KeyNotFoundException>();
+        await act.Should().ThrowAsync<NotFoundException>();
         pdfRepoMock.Verify(x => x.UpdateAsync(It.IsAny<PdfDocument>(), It.IsAny<CancellationToken>()), Times.Never);
         uowMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
