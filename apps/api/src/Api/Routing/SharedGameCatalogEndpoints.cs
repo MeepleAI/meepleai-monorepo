@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddRagToSharedGame;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RemoveRagFromSharedGame;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RecordGameEvent;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCatalogTrending;
@@ -408,6 +409,13 @@ internal static class SharedGameCatalogEndpoints
             .RequireAuthorization("AdminOrEditorPolicy")
             .WithName("RemoveGameDocument")
             .WithSummary("Remove document from game (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapDelete("/admin/shared-games/{id:guid}/documents/{documentId:guid}/full", HandleRemoveRagFromSharedGame)
+            .RequireAuthorization("AdminPolicy")
+            .WithName("RemoveRagFromSharedGame")
+            .WithSummary("Remove document with full PDF cleanup (Admin only)")
+            .WithDescription("Removes SharedGameDocument link and deletes PDF with cascade cleanup (VectorDoc, TextChunks, Qdrant, blob).")
             .Produces(StatusCodes.Status204NoContent);
 
         // Agent Linking (Issue #4228)
@@ -1526,6 +1534,21 @@ internal static class SharedGameCatalogEndpoints
         {
             return Results.BadRequest(new { error = ex.Message });
         }
+    }
+
+    private static async Task<IResult> HandleRemoveRagFromSharedGame(
+        Guid id,
+        Guid documentId,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new RemoveRagFromSharedGameCommand(id, documentId, session!.User!.Id);
+        await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.NoContent();
     }
 
     // ========================================
