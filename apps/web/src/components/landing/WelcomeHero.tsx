@@ -4,7 +4,10 @@ import { Button } from '@/components/ui/primitives/button';
 
 export function WelcomeHero() {
   return (
-    <section className="flex min-h-[80vh] flex-col items-center justify-center px-4 py-20 text-center">
+    <section
+      aria-label="Hero"
+      className="flex min-h-[80vh] flex-col items-center justify-center px-4 py-20 text-center"
+    >
       <p className="mb-4 text-sm uppercase tracking-widest text-muted-foreground">
         Il tuo compagno di gioco AI
       </p>

@@ -2,10 +2,6 @@
 
 @plugin "tailwindcss-animate";
 
-html {
-  scroll-behavior: smooth;
-}
-
 /* Import design system tokens */
 @import "./design-tokens.css";
 
@@ -124,6 +120,10 @@ html {
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }

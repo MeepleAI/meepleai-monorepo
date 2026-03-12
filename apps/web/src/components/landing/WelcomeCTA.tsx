@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/primitives/button';
 
 export function WelcomeCTA() {
   return (
-    <section className="px-4 py-20 text-center">
+    <section aria-label="Call to action" className="px-4 py-20 text-center">
       <h2 className="mb-4 text-3xl font-bold text-foreground">
         Pronto per la prossima serata giochi?
       </h2>

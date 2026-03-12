@@ -6,7 +6,7 @@ const stats = [
 
 export function SocialProofBar() {
   return (
-    <section className="bg-muted/50 px-4 py-16">
+    <section aria-label="Statistiche" className="bg-muted/50 px-4 py-16">
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 sm:flex-row sm:justify-center sm:gap-16">
         {stats.map(stat => (
           <div key={stat.label} className="text-center">

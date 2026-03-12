@@ -14,10 +14,7 @@
 
 import { redirect } from 'next/navigation';
 
-import { HowItWorksSteps } from '@/components/landing/HowItWorksSteps';
-import { SocialProofBar } from '@/components/landing/SocialProofBar';
-import { WelcomeCTA } from '@/components/landing/WelcomeCTA';
-import { WelcomeHero } from '@/components/landing/WelcomeHero';
+import { HowItWorksSteps, SocialProofBar, WelcomeCTA, WelcomeHero } from '@/components/landing';
 import { getServerUser } from '@/lib/auth/server';
 
 import type { Metadata } from 'next';
@@ -137,16 +134,11 @@ export default async function LandingPage() {
 
       {/* Header provided by (public)/layout.tsx → PublicLayout → PublicHeader */}
 
-      {/* Main Landing Content */}
-      {/* Note: <main> wrapper provided by PublicLayout - avoid nested landmarks */}
-      <>
-        <WelcomeHero />
-        <HowItWorksSteps />
-        <SocialProofBar />
-        <WelcomeCTA />
-      </>
-
-      {/* Footer provided by (public)/layout.tsx → PublicLayout → PublicFooter */}
+      {/* Main Landing Content — <main> wrapper provided by PublicLayout */}
+      <WelcomeHero />
+      <HowItWorksSteps />
+      <SocialProofBar />
+      <WelcomeCTA />
     </>
   );
 }
