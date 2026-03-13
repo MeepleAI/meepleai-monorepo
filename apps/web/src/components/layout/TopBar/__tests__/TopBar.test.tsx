@@ -5,7 +5,9 @@ import { TopBar } from '../TopBar';
 
 vi.mock('next/link', () => ({
   default: ({ children, href, ...props }: any) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -41,7 +43,7 @@ vi.mock('@/components/layout/MobileNavDrawer', () => ({
   MobileNavDrawer: () => null,
 }));
 
-vi.mock('@/components/layout/Navbar/Logo', () => ({
+vi.mock('@/components/layout/TopNavbar/Logo', () => ({
   Logo: () => <span>Logo</span>,
 }));
 
