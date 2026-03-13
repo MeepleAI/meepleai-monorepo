@@ -12,7 +12,7 @@ import { AlertTriangle, Check, RefreshCw, Shield, Timer, X } from 'lucide-react'
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/use-toast';
-import { getApiBase } from '@/lib/api/core/httpClient';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
@@ -319,19 +319,7 @@ export function RestartServicePanel() {
   const handleRestart = useCallback(
     async (serviceId: string) => {
       try {
-        const response = await fetch(`${getApiBase()}/api/v1/admin/operations/restart-service`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ serviceName: serviceId }),
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(errorBody || `HTTP ${response.status}`);
-        }
-
-        const data: RestartResult = await response.json();
+        const data = await api.admin.restartService(serviceId);
 
         startCooldown(serviceId, data);
 

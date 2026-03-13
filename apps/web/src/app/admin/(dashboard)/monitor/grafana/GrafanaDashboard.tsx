@@ -259,7 +259,7 @@ export function GrafanaDashboard() {
   const [timeRange, setTimeRange] = useState<string>('now-1h');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
-  const isConfigured = GRAFANA_BASE_URL !== 'http://localhost:3001';
+  const isConfigured = !!process.env.NEXT_PUBLIC_GRAFANA_URL;
 
   const grouped = useMemo(() => {
     return CATEGORIES.map(cat => ({
@@ -379,7 +379,6 @@ export function GrafanaDashboard() {
               title={selectedDashboard?.name ?? 'Grafana Dashboard'}
               className="w-full border-0"
               style={{ height: 'calc(100vh - 320px)', minHeight: '500px' }}
-              sandbox="allow-scripts allow-same-origin allow-popups"
               loading="lazy"
               data-testid="grafana-iframe"
             />

@@ -7,10 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const mockFetch = vi.hoisted(() => vi.fn());
+const mockRestartService = vi.hoisted(() => vi.fn());
 const mockToast = vi.hoisted(() => vi.fn());
-
-vi.stubGlobal('fetch', mockFetch);
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
@@ -18,8 +16,12 @@ vi.mock('@/hooks/use-toast', () => ({
   }),
 }));
 
-vi.mock('@/lib/api/core/httpClient', () => ({
-  getApiBase: () => 'http://localhost:8080',
+vi.mock('@/lib/api', () => ({
+  api: {
+    admin: {
+      restartService: mockRestartService,
+    },
+  },
 }));
 
 import { RestartServicePanel } from '../RestartServicePanel';
@@ -91,12 +93,9 @@ describe('RestartServicePanel', () => {
 
   it('successful restart shows cooldown', async () => {
     const user = userEvent.setup();
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        message: 'Restart initiated',
-        estimatedDowntime: '30-60 seconds',
-      }),
+    mockRestartService.mockResolvedValue({
+      message: 'Restart initiated',
+      estimatedDowntime: '30-60 seconds',
     });
     render(<RestartServicePanel />);
 
@@ -111,12 +110,9 @@ describe('RestartServicePanel', () => {
 
   it('successful restart shows result feedback', async () => {
     const user = userEvent.setup();
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        message: 'Restart initiated',
-        estimatedDowntime: '30-60 seconds',
-      }),
+    mockRestartService.mockResolvedValue({
+      message: 'Restart initiated',
+      estimatedDowntime: '30-60 seconds',
     });
     render(<RestartServicePanel />);
 
@@ -134,7 +130,7 @@ describe('RestartServicePanel', () => {
 
   it('failed restart shows error toast', async () => {
     const user = userEvent.setup();
-    mockFetch.mockRejectedValue(new Error('Connection refused'));
+    mockRestartService.mockRejectedValue(new Error('Connection refused'));
     render(<RestartServicePanel />);
 
     await user.click(screen.getByTestId('restart-btn-api'));
@@ -149,5 +145,28 @@ describe('RestartServicePanel', () => {
         })
       );
     });
+  });
+
+  it('API error response shows error message in toast', async () => {
+    const user = userEvent.setup();
+    mockRestartService.mockRejectedValue(new Error('Service not found'));
+    render(<RestartServicePanel />);
+
+    await user.click(screen.getByTestId('restart-btn-api'));
+    await user.type(screen.getByTestId('confirm-input-api'), 'api');
+    await user.click(screen.getByTestId('confirm-restart-api'));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Restart failed',
+          description: 'Service not found',
+          variant: 'destructive',
+        })
+      );
+    });
+
+    // Should NOT show cooldown on failure
+    expect(screen.queryByTestId('cooldown-api')).not.toBeInTheDocument();
   });
 });

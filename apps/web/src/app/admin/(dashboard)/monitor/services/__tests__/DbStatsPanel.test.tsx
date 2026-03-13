@@ -140,9 +140,8 @@ describe('DbStatsPanel', () => {
 
   // ==================== Vacuum ====================
 
-  it('vacuum button shows confirmation and executes', async () => {
+  it('vacuum button shows inline confirmation and executes on confirm', async () => {
     const user = userEvent.setup();
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockGetResourceDatabaseMetrics.mockResolvedValue(createMockMetrics());
     mockGetResourceDatabaseTopTables.mockResolvedValue(createMockTables());
     mockVacuumDatabase.mockResolvedValue(undefined);
@@ -152,19 +151,19 @@ describe('DbStatsPanel', () => {
       expect(screen.getByTestId('db-vacuum-btn')).toBeInTheDocument();
     });
 
+    // Click vacuum shows inline confirmation
     await user.click(screen.getByTestId('db-vacuum-btn'));
+    expect(screen.getByTestId('db-vacuum-confirm')).toBeInTheDocument();
 
-    expect(confirmSpy).toHaveBeenCalled();
+    // Confirm executes vacuum
+    await user.click(screen.getByTestId('db-vacuum-confirm-yes'));
     await waitFor(() => {
       expect(mockVacuumDatabase).toHaveBeenCalledWith(false);
     });
-
-    confirmSpy.mockRestore();
   });
 
-  it('vacuum button does nothing when cancelled', async () => {
+  it('vacuum confirmation cancel hides confirmation', async () => {
     const user = userEvent.setup();
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     mockGetResourceDatabaseMetrics.mockResolvedValue(createMockMetrics());
     mockGetResourceDatabaseTopTables.mockResolvedValue(createMockTables());
     render(<DbStatsPanel />);
@@ -174,11 +173,12 @@ describe('DbStatsPanel', () => {
     });
 
     await user.click(screen.getByTestId('db-vacuum-btn'));
+    expect(screen.getByTestId('db-vacuum-confirm')).toBeInTheDocument();
 
-    expect(confirmSpy).toHaveBeenCalled();
+    // Cancel hides confirmation
+    await user.click(screen.getByTestId('db-vacuum-confirm-no'));
+    expect(screen.queryByTestId('db-vacuum-confirm')).not.toBeInTheDocument();
     expect(mockVacuumDatabase).not.toHaveBeenCalled();
-
-    confirmSpy.mockRestore();
   });
 
   // ==================== Empty State ====================

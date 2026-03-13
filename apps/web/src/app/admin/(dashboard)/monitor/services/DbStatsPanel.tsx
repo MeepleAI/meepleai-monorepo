@@ -180,6 +180,7 @@ export function DbStatsPanel() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [vacuuming, setVacuuming] = useState(false);
+  const [vacuumConfirm, setVacuumConfirm] = useState(false);
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
@@ -208,16 +209,11 @@ export function DbStatsPanel() {
   }, [fetchData]);
 
   const handleVacuum = useCallback(async () => {
-    const confirmed = window.confirm(
-      'Run VACUUM on the database? This reclaims storage from dead tuples. The operation may take a moment.'
-    );
-    if (!confirmed) return;
-
+    setVacuumConfirm(false);
     setVacuuming(true);
     try {
       await api.admin.vacuumDatabase(false);
       toast({ title: 'Vacuum completed successfully' });
-      // Refresh metrics after vacuum
       fetchData();
     } catch {
       toast({ title: 'Vacuum failed', variant: 'destructive' });
@@ -254,21 +250,51 @@ export function DbStatsPanel() {
           <h3 className="font-quicksand font-semibold text-base">Database Overview</h3>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleVacuum}
-            disabled={vacuuming}
-            className="gap-1.5"
-            data-testid="db-vacuum-btn"
-          >
-            {vacuuming ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Zap className="h-3.5 w-3.5" />
-            )}
-            Vacuum
-          </Button>
+          {vacuumConfirm ? (
+            <div className="flex items-center gap-1.5" data-testid="db-vacuum-confirm">
+              <span className="text-xs text-destructive font-medium">Run VACUUM?</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleVacuum}
+                disabled={vacuuming}
+                className="gap-1 h-7 text-xs"
+                data-testid="db-vacuum-confirm-yes"
+              >
+                {vacuuming ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Zap className="h-3 w-3" />
+                )}
+                Yes
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setVacuumConfirm(false)}
+                className="h-7 text-xs"
+                data-testid="db-vacuum-confirm-no"
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setVacuumConfirm(true)}
+              disabled={vacuuming}
+              className="gap-1.5"
+              data-testid="db-vacuum-btn"
+            >
+              {vacuuming ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Zap className="h-3.5 w-3.5" />
+              )}
+              Vacuum
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
