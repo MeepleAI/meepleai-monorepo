@@ -8,7 +8,7 @@
  * unstructured, smoldocling) → application (api).
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AlertTriangle, Check, Loader2, RefreshCw, Shield, X } from 'lucide-react';
 
@@ -29,19 +29,21 @@ interface ServiceDef {
 }
 
 /**
- * Dependency-ordered service tiers:
- * Tier 1: Infrastructure (databases, caches)
- * Tier 2: AI/processing services
- * Tier 3: Application layer
+ * Dependency-ordered service tiers (restartable services only).
+ * Infrastructure containers (postgres, redis, qdrant) are excluded — they are
+ * managed by docker compose and the Docker API is read-only.
+ *
+ * Tier 1: AI/processing services (independent, restart first)
+ * Tier 2: Application layer (depends on AI services)
  */
 const SERVICE_TIERS: ServiceDef[] = [
-  // Tier 1 — Infrastructure (no internal deps)
-  { id: 'embedding-service', label: 'Embedding Service', tier: 2 },
-  { id: 'reranker-service', label: 'Reranker Service', tier: 2 },
-  { id: 'unstructured-service', label: 'Unstructured Service', tier: 2 },
-  { id: 'smoldocling-service', label: 'SmolDocling Service', tier: 2 },
-  // Tier 3 — Application (depends on all above)
-  { id: 'api', label: 'API Service', tier: 3 },
+  // Tier 1 — AI/processing services (no internal deps)
+  { id: 'embedding-service', label: 'Embedding Service', tier: 1 },
+  { id: 'reranker-service', label: 'Reranker Service', tier: 1 },
+  { id: 'unstructured-service', label: 'Unstructured Service', tier: 1 },
+  { id: 'smoldocling-service', label: 'SmolDocling Service', tier: 1 },
+  // Tier 2 — Application (depends on all above)
+  { id: 'api', label: 'API Service', tier: 2 },
 ];
 
 type RestartStatus = 'pending' | 'restarting' | 'done' | 'failed';
@@ -94,6 +96,13 @@ export function RestartAllPanel() {
   const [confirmText, setConfirmText] = useState('');
   const [isRestarting, setIsRestarting] = useState(false);
   const [progress, setProgress] = useState<ServiceProgress[]>([]);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const isConfirmMatch = confirmText === 'RESTART ALL';
 
@@ -120,18 +129,22 @@ export function RestartAllPanel() {
 
       // Restart all services in same tier sequentially
       for (const service of tierServices) {
+        if (!mountedRef.current) return;
+
         setProgress(prev =>
           prev.map(p => (p.id === service.id ? { ...p, status: 'restarting' } : p))
         );
 
         try {
           const result = await api.admin.restartService(service.id);
+          if (!mountedRef.current) return;
           setProgress(prev =>
             prev.map(p =>
               p.id === service.id ? { ...p, status: 'done', message: result.message } : p
             )
           );
         } catch (err) {
+          if (!mountedRef.current) return;
           const message = err instanceof Error ? err.message : 'Unknown error';
           setProgress(prev =>
             prev.map(p => (p.id === service.id ? { ...p, status: 'failed', message } : p))
@@ -144,6 +157,8 @@ export function RestartAllPanel() {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
+
+    if (!mountedRef.current) return;
 
     setIsRestarting(false);
 
