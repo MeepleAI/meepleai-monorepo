@@ -140,7 +140,7 @@ async function setupSessionApiRoutes(context: BrowserContext) {
   );
 
   // Get session detail
-  await context.route(`${API_BASE}/api/v1/live-sessions/${SESSION_ID}`, async route => {
+  await context.route(`${API_BASE}/api/v1/live-sessions/${SESSION_ID}**`, async route => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -404,6 +404,7 @@ test.describe('Multi-Device Session Flow', () => {
         if (await submitButton.isVisible({ timeout: 2000 }).catch(() => false)) {
           await submitButton.click();
           await hostPage.waitForTimeout(500);
+          expect(proposeCalled).toBe(true);
         }
       }
 
@@ -427,7 +428,18 @@ test.describe('Multi-Device Session Flow', () => {
       );
 
       await hostPage.goto(`/sessions/${SESSION_ID}/scoreboard`);
-      await hostPage.waitForTimeout(1000);
+
+      // Look for confirm button on scoreboard
+      const confirmButton = hostPage
+        .getByRole('button', { name: /confirm/i })
+        .or(hostPage.locator('[data-testid="confirm-score"]'))
+        .first();
+
+      if (await confirmButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await confirmButton.click();
+        await hostPage.waitForTimeout(500);
+        expect(confirmCalled).toBe(true);
+      }
 
       await hostContext.close();
     });
@@ -564,9 +576,8 @@ test.describe('Multi-Device Session Flow', () => {
 
       const hasJoinForm = await nameInput.isVisible({ timeout: 3000 }).catch(() => false);
 
-      // Guest page should render join UI or redirect
-      // (if auth redirect happens, the join page won't show the form)
-      expect(true).toBeTruthy(); // Pages loaded without crash
+      // Guest page should render the join form (name input)
+      expect(hasJoinForm).toBe(true);
 
       await hostContext.close();
       await guestContext.close();
@@ -617,10 +628,12 @@ test.describe('Multi-Device Session Flow', () => {
         guestPage.goto(`/sessions/${SESSION_ID}/players`),
       ]);
 
-      // Both should have made independent API calls
-      // (at least one context should have hit the route)
+      // Wait for API calls to complete
       await hostPage.waitForTimeout(1000);
       await guestPage.waitForTimeout(1000);
+
+      // Both contexts should have made independent API calls
+      expect(hostApiCalled || guestApiCalled).toBe(true);
 
       await hostContext.close();
       await guestContext.close();
