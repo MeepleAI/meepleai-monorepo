@@ -96,6 +96,7 @@ internal sealed class JoinSessionCommandHandler : IRequestHandler<JoinSessionCom
             SessionId = participant.SessionId,
             UserId = participant.UserId,
             GuestName = participant.GuestName,
+            RegisteredDisplayName = participant.RegisteredDisplayName,
             Role = participant.Role.ToString(),
             AgentAccessEnabled = participant.AgentAccessEnabled,
             ConnectionToken = participant.ConnectionToken,
