@@ -6,7 +6,7 @@ import { cva } from 'class-variance-authority';
 
 /**
  * Supported entity types with semantic colors
- * Issue #4030: Extended from 5 to 7 types (removed collection, added session/agent/document/chatSession)
+ * Issue #4030: Extended from 5 to 9 types (game, player, session, agent, kb, chatSession, event, toolkit, custom)
  */
 export type MeepleEntityType =
   | 'game'
