@@ -60,6 +60,7 @@ import {
   createPlaylistsClient,
   createWishlistClient,
   createPlayRecordsClient,
+  createFeatureFlagsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -100,6 +101,7 @@ import {
   type PlaylistsClient,
   type WishlistClient,
   type PlayRecordsClient,
+  type FeatureFlagsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -307,6 +309,9 @@ export interface ApiClient {
   /** Play Records — session tracking and statistics (Issue #3892) */
   playRecords: PlayRecordsClient;
 
+  /** User Feature Flags — server-driven feature access */
+  featureFlags: FeatureFlagsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -397,6 +402,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     playlists: createPlaylistsClient({ httpClient }), // Gap Closure — Playlists
     wishlist: createWishlistClient({ httpClient }), // Wishlist
     playRecords: createPlayRecordsClient({ httpClient }), // Play Records
+    featureFlags: createFeatureFlagsClient({ httpClient }), // User Feature Flags
     delete: (path: string) => httpClient.delete(path),
   };
 

@@ -44,3 +44,4 @@ export * from './sessionInviteClient'; // Game Night Improvvisata — Session In
 export * from './playlistsClient'; // Gap Closure — Playlists
 export * from './wishlistClient'; // Wishlist
 export * from './playRecordsClient'; // Play Records
+export * from './featureFlagsClient'; // User Feature Flags
