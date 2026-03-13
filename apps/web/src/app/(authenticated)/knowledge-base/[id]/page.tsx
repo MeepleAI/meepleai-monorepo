@@ -38,7 +38,7 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
   const [loading, setLoading] = useState(true);
   const [error, _setError] = useState<string | null>(null);
 
-  const navigationLinks = useEntityNavigation('document', {
+  const navigationLinks = useEntityNavigation('kb', {
     id: documentId,
     gameId: document?.gameId,
     agentId: document?.agentId,
