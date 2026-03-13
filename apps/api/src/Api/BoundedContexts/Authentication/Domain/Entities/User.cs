@@ -824,6 +824,18 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Restores profile and onboarding state from persistence layer.
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreOnboardingState(string? avatarUrl, string? bio, DateTime? wizardSeenAt, DateTime? dismissedAt)
+    {
+        AvatarUrl = avatarUrl;
+        Bio = bio;
+        OnboardingWizardSeenAt = wizardSeenAt;
+        OnboardingDismissedAt = dismissedAt;
+    }
+
+    /// <summary>
     /// Restores email verification state from persistence layer.
     /// Issue #3672: Internal method to avoid reflection in repository (S3011 compliance).
     /// Should only be called by UserRepository during entity materialization.
