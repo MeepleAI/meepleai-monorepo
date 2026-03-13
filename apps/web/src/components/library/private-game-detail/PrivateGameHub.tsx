@@ -4,10 +4,18 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
 import { PdfProcessingProgressBar } from '@/components/pdf/PdfProcessingProgressBar';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/navigation/sheet';
 import { usePrivateGame } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 
@@ -23,6 +31,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
   const { data: game, isLoading } = usePrivateGame(privateGameId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [showTryQuestion, setShowTryQuestion] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<PdfStatus>('none');
   const [activePdfId, setActivePdfId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -157,6 +166,9 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
       setAgentStatus('ready');
     } catch {
       setAgentStatus('none');
+      toast.error("Errore nella creazione dell'agente", {
+        description: 'Riprova o contatta il supporto.',
+      });
     }
   }, [privateGameId]);
 
@@ -164,12 +176,15 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
     try {
       const sessionId = await api.liveSessions.createSession({
         gameId: privateGameId,
+        gameName: game?.title,
       });
       router.push(`/sessions/${sessionId}/play`);
     } catch {
-      // Error handling deferred to Task 4+
+      toast.error('Impossibile avviare la partita', {
+        description: 'Riprova tra qualche secondo.',
+      });
     }
-  }, [privateGameId, router]);
+  }, [privateGameId, game?.title, router]);
 
   const handleResumeSession = useCallback(
     async (sessionId: string) => {
@@ -177,7 +192,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         await api.liveSessions.resumeSession(sessionId);
         router.push(`/sessions/${sessionId}/play`);
       } catch {
-        // Error handling deferred
+        toast.error('Impossibile riprendere la partita');
       }
     },
     [router]
@@ -189,7 +204,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
       await api.liveSessions.completeSession(sessionId);
       setPausedSessions(prev => prev.filter(s => s.id !== sessionId));
     } catch {
-      // Error handling deferred
+      toast.error("Errore durante l'archiviazione");
     }
   }, []);
 
@@ -255,6 +270,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         onUploadPdf={handleUploadPdf}
         onCreateAgent={handleCreateAgent}
         onStartGame={handleStartGame}
+        onTryQuestion={() => setShowTryQuestion(true)}
       >
         {pdfStatus === 'uploading' && (
           <div className="space-y-2">
@@ -272,7 +288,12 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         {pdfStatus === 'processing' && activePdfId && (
           <PdfProcessingProgressBar
             pdfId={activePdfId}
-            onComplete={() => setPdfStatus('ready')}
+            onComplete={() => {
+              setPdfStatus('ready');
+              toast.success('Regolamento pronto!', {
+                description: "Il PDF è stato elaborato. L'agente AI verrà creato automaticamente.",
+              });
+            }}
             onError={() => setPdfStatus('failed')}
             onCancel={() => setPdfStatus('none')}
           />
@@ -294,6 +315,21 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         onAccept={handleDisclaimerAccept}
         onCancel={() => setShowDisclaimer(false)}
       />
+
+      {/* Try a question sheet */}
+      <Sheet open={showTryQuestion} onOpenChange={setShowTryQuestion}>
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col overflow-hidden">
+          <SheetHeader>
+            <SheetTitle>Prova l&apos;assistente AI</SheetTitle>
+            <SheetDescription>
+              Fai una domanda sul gioco per testare l&apos;agente.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 mt-4 min-h-0 flex items-center justify-center text-sm text-muted-foreground">
+            L&apos;agente risponderà alle tue domande sul regolamento.
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
