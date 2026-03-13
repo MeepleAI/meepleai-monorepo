@@ -27,6 +27,7 @@ export function usePlayRecord(id: string) {
     queryKey: playRecordKeys.detail(id),
     queryFn: () => api.playRecords.getById(id),
     enabled: !!id,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -34,6 +35,7 @@ export function usePlayHistory(params?: { page?: number; pageSize?: number; game
   return useQuery({
     queryKey: playRecordKeys.history(params),
     queryFn: () => api.playRecords.getHistory(params),
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -41,6 +43,7 @@ export function usePlayStatistics(params?: { startDate?: string; endDate?: strin
   return useQuery({
     queryKey: playRecordKeys.statistics(params),
     queryFn: () => api.playRecords.getStatistics(params),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
