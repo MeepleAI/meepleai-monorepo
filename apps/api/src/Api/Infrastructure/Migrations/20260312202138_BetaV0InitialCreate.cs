@@ -7449,7 +7449,7 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_UserCollectionEntries_UserId_Favorites",
                 table: "user_collection_entries",
                 column: "UserId",
-                filter: "[IsFavorite] = 1");
+                filter: "\"IsFavorite\" = true");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserGameLabels_EntryId_LabelId",

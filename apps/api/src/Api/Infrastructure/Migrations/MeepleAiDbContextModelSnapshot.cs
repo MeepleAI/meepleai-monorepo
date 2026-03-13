@@ -10125,7 +10125,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_UserCollectionEntries_UserId_Favorites")
-                        .HasFilter("[IsFavorite] = 1");
+                        .HasFilter("\"IsFavorite\" = true");
 
                     b.HasIndex("EntityType", "EntityId")
                         .HasDatabaseName("IX_UserCollectionEntries_EntityType_EntityId");

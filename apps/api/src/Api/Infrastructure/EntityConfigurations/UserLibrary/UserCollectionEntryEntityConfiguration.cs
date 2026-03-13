@@ -60,7 +60,7 @@ internal class UserCollectionEntryEntityConfiguration : IEntityTypeConfiguration
         // User favorites query (partial index)
         builder.HasIndex(e => e.UserId)
             .HasDatabaseName("IX_UserCollectionEntries_UserId_Favorites")
-            .HasFilter("[IsFavorite] = 1");
+            .HasFilter("\"IsFavorite\" = true");
 
         // Unique constraint: one entry per user per entity
         builder.HasIndex(e => new { e.UserId, e.EntityType, e.EntityId })
