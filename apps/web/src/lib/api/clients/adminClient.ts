@@ -220,6 +220,16 @@ import {
 } from '../schemas/financial-ledger.schemas';
 import * as MechanicExtractorSchemas from '../schemas/mechanic-extractor.schemas';
 import {
+  RagPipelineStatsSchema,
+  VectorStoreMetricsResponseSchema,
+  EmbeddingServiceStatusSchema,
+  RecentProcessingActivitySchema,
+  type RagPipelineStats,
+  type VectorStoreMetricsResponse,
+  type EmbeddingServiceStatus,
+  type RecentProcessingActivity,
+} from '../schemas/rag-dashboard.schemas';
+import {
   ResourceForecastEstimationResultSchema,
   ResourceForecastsResponseSchema,
   SaveForecastResponseSchema,
@@ -258,6 +268,13 @@ export const ADMIN_PDF_ROUTES = {
 export const ADMIN_KB_ROUTES = {
   vectorCollections: '/api/v1/admin/kb/vector-collections',
   processingQueue: '/api/v1/admin/kb/processing-queue',
+} as const;
+
+export const ADMIN_RAG_DASHBOARD_ROUTES = {
+  pipelineStats: '/api/v1/admin/rag-dashboard/pipeline-stats',
+  vectorMetrics: '/api/v1/admin/rag-dashboard/vector-metrics',
+  embeddingStatus: '/api/v1/admin/rag-dashboard/embedding-status',
+  recentActivity: '/api/v1/admin/rag-dashboard/recent-activity',
 } as const;
 
 // ============================================================================
@@ -2537,6 +2554,56 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         {}
       );
       return result ?? { success: false, message: 'No response', clearedAt: null };
+    },
+
+    // ========== RAG Dashboard (Issue #259) ==========
+
+    /**
+     * Get RAG pipeline stats (document counts by processing state)
+     * GET /api/v1/admin/rag-dashboard/pipeline-stats
+     * Issue #260
+     */
+    async getRagPipelineStats(): Promise<RagPipelineStats | null> {
+      return httpClient.get(ADMIN_RAG_DASHBOARD_ROUTES.pipelineStats, RagPipelineStatsSchema);
+    },
+
+    /**
+     * Get vector store metrics (collection statistics)
+     * GET /api/v1/admin/rag-dashboard/vector-metrics
+     * Issue #261
+     */
+    async getRagVectorMetrics(): Promise<VectorStoreMetricsResponse | null> {
+      return httpClient.get(
+        ADMIN_RAG_DASHBOARD_ROUTES.vectorMetrics,
+        VectorStoreMetricsResponseSchema
+      );
+    },
+
+    /**
+     * Get embedding service health status
+     * GET /api/v1/admin/rag-dashboard/embedding-status
+     * Issue #262
+     */
+    async getRagEmbeddingStatus(): Promise<EmbeddingServiceStatus | null> {
+      return httpClient.get(
+        ADMIN_RAG_DASHBOARD_ROUTES.embeddingStatus,
+        EmbeddingServiceStatusSchema
+      );
+    },
+
+    /**
+     * Get recent PDF processing activity
+     * GET /api/v1/admin/rag-dashboard/recent-activity
+     * Issue #263
+     */
+    async getRagRecentActivity(limit?: number): Promise<RecentProcessingActivity | null> {
+      const params = new URLSearchParams();
+      if (limit) params.set('limit', String(limit));
+      const qs = params.toString();
+      return httpClient.get(
+        `${ADMIN_RAG_DASHBOARD_ROUTES.recentActivity}${qs ? `?${qs}` : ''}`,
+        RecentProcessingActivitySchema
+      );
     },
 
     // ========== OpenRouter Usage Dashboard (Issues #5078-#5083) ==========

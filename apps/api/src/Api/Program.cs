@@ -602,6 +602,7 @@ v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)
 // Qdrant admin endpoints removed — pgvector is the sole vector store
 v1Api.MapAdminEmbeddingEndpoints();    // Embedding service dashboard (Issue #4878)
 v1Api.MapAdminPipelineEndpoints();     // Pipeline health overview (Issue #4879)
+v1Api.MapAdminRagDashboardEndpoints(); // RAG dashboard overview (Issue #259)
 v1Api.MapAdminKBSettingsEndpoints();   // KB settings read-only (Issue #4881)
 v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
 v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
