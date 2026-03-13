@@ -58,6 +58,7 @@ import {
   createTierClient,
   createSessionInviteClient,
   createPlaylistsClient,
+  createWishlistClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -96,6 +97,7 @@ import {
   type TierClient,
   type SessionInviteClient,
   type PlaylistsClient,
+  type WishlistClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -297,6 +299,9 @@ export interface ApiClient {
   /** Game Night Playlists — Gap Closure */
   playlists: PlaylistsClient;
 
+  /** Wishlist */
+  wishlist: WishlistClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -385,6 +390,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     tiers: createTierClient({ httpClient }), // Game Night Improvvisata — Tier & Usage
     sessionInvites: createSessionInviteClient({ httpClient }), // Game Night Improvvisata — Session Invites
     playlists: createPlaylistsClient({ httpClient }), // Gap Closure — Playlists
+    wishlist: createWishlistClient({ httpClient }), // Wishlist
     delete: (path: string) => httpClient.delete(path),
   };
 
