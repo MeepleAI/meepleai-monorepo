@@ -42,3 +42,4 @@ export * from './gameNightBggClient'; // Game Night Improvvisata
 export * from './tierClient'; // Game Night Improvvisata — Tier & Usage
 export * from './sessionInviteClient'; // Game Night Improvvisata — Session Invites
 export * from './sandboxClient'; // RAG Sandbox Dashboard
+export * from './onboardingClient'; // First-time user onboarding
