@@ -322,6 +322,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // E4-1: Degraded agent service — BGG-only mode when no KB cards are available
         services.AddScoped<IDegradedAgentService, DegradedAgentService>();
+
+        // E4-3: Session query budget — Redis-backed per-session AI query tracking
+        services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

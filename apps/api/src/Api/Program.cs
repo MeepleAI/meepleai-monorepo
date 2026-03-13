@@ -362,6 +362,8 @@ builder.Services.AddCors(options =>
 });
 
 // Issue #2406: SignalR for real-time game state updates
+// E3-4: Custom user ID provider for guest SignalR auth
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Api.Hubs.SessionParticipantIdProvider>();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
