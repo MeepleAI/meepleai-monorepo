@@ -58,6 +58,12 @@ public sealed class User : AggregateRoot<Guid>
     // Onboarding preferences (Issue #124: Invitation system)
     public List<string>? Interests { get; private set; }
 
+    // Profile & Onboarding
+    public string? AvatarUrl { get; private set; }
+    public string? Bio { get; private set; }
+    public DateTime? OnboardingWizardSeenAt { get; private set; }
+    public DateTime? OnboardingDismissedAt { get; private set; }
+
     // Navigation properties (not part of domain model, for EF Core only)
     private readonly List<Session> _sessions = new();
     private readonly List<ApiKey> _apiKeys = new();
@@ -664,6 +670,44 @@ public sealed class User : AggregateRoot<Guid>
     {
         Interests = interests;
     }
+
+    #region Onboarding
+
+    /// <summary>
+    /// Marks the onboarding wizard as seen. Idempotent — early return if already set.
+    /// </summary>
+    public void MarkOnboardingWizardSeen()
+    {
+        if (OnboardingWizardSeenAt.HasValue) return;
+        OnboardingWizardSeenAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Dismisses the onboarding checklist. Idempotent — early return if already dismissed.
+    /// </summary>
+    public void DismissOnboarding()
+    {
+        if (OnboardingDismissedAt.HasValue) return;
+        OnboardingDismissedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Updates the user's avatar URL.
+    /// </summary>
+    public void UpdateAvatarUrl(string avatarUrl)
+    {
+        AvatarUrl = avatarUrl;
+    }
+
+    /// <summary>
+    /// Updates the user's bio.
+    /// </summary>
+    public void UpdateBio(string bio)
+    {
+        Bio = bio;
+    }
+
+    #endregion
 
     #region Persistence Hydration Methods (internal - S3011 fix)
 
