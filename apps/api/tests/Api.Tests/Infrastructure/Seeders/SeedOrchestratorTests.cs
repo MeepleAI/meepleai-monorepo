@@ -8,7 +8,12 @@ using Xunit;
 
 namespace Api.Tests.Infrastructure.Seeders;
 
+/// <summary>
+/// Tests for SeedOrchestrator static methods: ResolveProfile, FilterLayers.
+/// Env-var tests serialized to avoid parallel interference.
+/// </summary>
 [Trait("Category", TestCategories.Unit)]
+[Collection("EnvironmentVariableTests")]
 public sealed class SeedOrchestratorTests
 {
     [Theory]
@@ -20,14 +25,10 @@ public sealed class SeedOrchestratorTests
     [InlineData("PROD", SeedProfile.Prod)]
     public void ResolveProfile_FromEnvironment_ParsesCorrectly(string envValue, SeedProfile expected)
     {
-        // Arrange
         Environment.SetEnvironmentVariable("SEED_PROFILE", envValue);
         try
         {
-            // Act
             var result = SeedOrchestrator.ResolveProfile(null);
-
-            // Assert
             result.Should().Be(expected);
         }
         finally
@@ -39,57 +40,36 @@ public sealed class SeedOrchestratorTests
     [Fact]
     public void ResolveProfile_FromConfig_WhenNoEnvVar()
     {
-        // Arrange
         Environment.SetEnvironmentVariable("SEED_PROFILE", null);
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Seeding:Profile"] = "Staging" })
             .Build();
 
-        // Act
         var result = SeedOrchestrator.ResolveProfile(config);
-
-        // Assert
         result.Should().Be(SeedProfile.Staging);
     }
 
     [Fact]
     public void ResolveProfile_DefaultsToDev_WhenNothingConfigured()
     {
-        // Arrange
         Environment.SetEnvironmentVariable("SEED_PROFILE", null);
-
-        // Act
         var result = SeedOrchestrator.ResolveProfile(null);
-
-        // Assert
         result.Should().Be(SeedProfile.Dev);
     }
 
     [Fact]
     public void FilterLayers_ReturnsOnlyMatchingLayers()
     {
-        // Arrange
-        var core = new Mock<ISeedLayer>();
-        core.Setup(l => l.MinimumProfile).Returns(SeedProfile.Prod);
-        core.Setup(l => l.Name).Returns("Core");
+        var core = MockLayer("Core", SeedProfile.Prod);
+        var catalog = MockLayer("Catalog", SeedProfile.Staging);
+        var livedIn = MockLayer("LivedIn", SeedProfile.Dev);
+        var layers = new[] { core, catalog, livedIn };
 
-        var catalog = new Mock<ISeedLayer>();
-        catalog.Setup(l => l.MinimumProfile).Returns(SeedProfile.Staging);
-        catalog.Setup(l => l.Name).Returns("Catalog");
+        var prodLayers = SeedOrchestrator.FilterLayers(layers, SeedProfile.Prod);
+        var stagingLayers = SeedOrchestrator.FilterLayers(layers, SeedProfile.Staging);
+        var devLayers = SeedOrchestrator.FilterLayers(layers, SeedProfile.Dev);
 
-        var livedIn = new Mock<ISeedLayer>();
-        livedIn.Setup(l => l.MinimumProfile).Returns(SeedProfile.Dev);
-        livedIn.Setup(l => l.Name).Returns("LivedIn");
-
-        var layers = new[] { core.Object, catalog.Object, livedIn.Object };
-
-        // Act - Prod profile should only run Core
-        var prodLayers = SeedOrchestrator.FilterLayers(layers, SeedProfile.Prod).ToList();
-        var stagingLayers = SeedOrchestrator.FilterLayers(layers, SeedProfile.Staging).ToList();
-        var devLayers = SeedOrchestrator.FilterLayers(layers, SeedProfile.Dev).ToList();
-
-        // Assert
-        prodLayers.Should().HaveCount(1).And.Contain(core.Object);
+        prodLayers.Should().HaveCount(1).And.Contain(core);
         stagingLayers.Should().HaveCount(2);
         devLayers.Should().HaveCount(3);
     }
@@ -97,22 +77,39 @@ public sealed class SeedOrchestratorTests
     [Fact]
     public void FilterLayers_OrdersByMinimumProfile()
     {
-        // Arrange - register in reverse order
-        var livedIn = new Mock<ISeedLayer>();
-        livedIn.Setup(l => l.MinimumProfile).Returns(SeedProfile.Dev);
-        livedIn.Setup(l => l.Name).Returns("LivedIn");
+        var livedIn = MockLayer("LivedIn", SeedProfile.Dev);
+        var core = MockLayer("Core", SeedProfile.Prod);
+        var layers = new[] { livedIn, core }; // Reverse order
 
-        var core = new Mock<ISeedLayer>();
-        core.Setup(l => l.MinimumProfile).Returns(SeedProfile.Prod);
-        core.Setup(l => l.Name).Returns("Core");
+        var result = SeedOrchestrator.FilterLayers(layers, SeedProfile.Dev);
 
-        var layers = new[] { livedIn.Object, core.Object };
-
-        // Act
-        var result = SeedOrchestrator.FilterLayers(layers, SeedProfile.Dev).ToList();
-
-        // Assert - should be ordered by MinimumProfile (Prod first, then Dev)
         result[0].Name.Should().Be("Core");
         result[1].Name.Should().Be("LivedIn");
+    }
+
+    [Fact]
+    public void FilterLayers_ReturnsReadOnlyList()
+    {
+        var layers = new[] { MockLayer("Core", SeedProfile.Prod) };
+        var result = SeedOrchestrator.FilterLayers(layers, SeedProfile.Dev);
+
+        result.Should().BeAssignableTo<IReadOnlyList<ISeedLayer>>();
+    }
+
+    [Fact]
+    public void FilterLayers_NoneProfile_ReturnsEmpty()
+    {
+        var layers = new[] { MockLayer("Core", SeedProfile.Prod) };
+        var result = SeedOrchestrator.FilterLayers(layers, SeedProfile.None);
+
+        result.Should().BeEmpty();
+    }
+
+    private static ISeedLayer MockLayer(string name, SeedProfile minProfile)
+    {
+        var mock = new Mock<ISeedLayer>();
+        mock.Setup(l => l.Name).Returns(name);
+        mock.Setup(l => l.MinimumProfile).Returns(minProfile);
+        return mock.Object;
     }
 }

@@ -595,6 +595,7 @@ v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
 v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
+v1Api.MapAdminSeedingEndpoints();      // Epic #318: Admin seeding re-trigger
 v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
 v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 

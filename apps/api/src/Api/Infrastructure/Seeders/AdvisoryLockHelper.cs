@@ -5,27 +5,35 @@ namespace Api.Infrastructure.Seeders;
 
 /// <summary>
 /// PostgreSQL advisory lock wrapper for safe multi-replica seeding.
-/// Uses session-level advisory locks (released on disconnect).
+/// Uses non-blocking try-lock: if another replica holds the lock, this one skips.
 /// </summary>
 internal static class AdvisoryLockHelper
 {
     /// <summary>
-    /// Deterministic lock key derived from "MeepleAI_Seeding" hash.
-    /// All replicas must use the same key.
+    /// Lock key matching the original SeedOrchestrator constant ("MeepleAI" as long).
+    /// Must remain stable across deployments for rolling-update safety.
     /// </summary>
-    public static long SeedingLockKey { get; } = GetDeterministicHashCode("MeepleAI_Seeding");
-
-    public static string AcquireLockSql => $"SELECT pg_advisory_lock({SeedingLockKey})";
-    public static string ReleaseLockSql => $"SELECT pg_advisory_unlock({SeedingLockKey})";
+    public const long SeedingLockKey = 0x4D65_6570_6C65_4149;
 
     /// <summary>
-    /// Acquires the advisory lock. Blocks until the lock is available.
+    /// Attempts to acquire the advisory lock without blocking.
+    /// Returns true if acquired, false if another replica holds it.
     /// </summary>
-    public static async Task AcquireAsync(MeepleAiDbContext db, ILogger logger, CancellationToken ct = default)
+    public static async Task<bool> TryAcquireAsync(MeepleAiDbContext db, ILogger logger, CancellationToken ct = default)
     {
-        logger.LogInformation("Acquiring seeding advisory lock (key={LockKey})...", SeedingLockKey);
-        await db.Database.ExecuteSqlRawAsync(AcquireLockSql, ct).ConfigureAwait(false);
-        logger.LogInformation("Seeding advisory lock acquired");
+        logger.LogInformation("Attempting seeding advisory lock (key={LockKey})...", SeedingLockKey);
+
+        var acquired = await db.Database
+            .SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({SeedingLockKey}) AS \"Value\"")
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+
+        if (acquired)
+            logger.LogInformation("Seeding advisory lock acquired");
+        else
+            logger.LogInformation("Another replica holds the seeding lock — skipping");
+
+        return acquired;
     }
 
     /// <summary>
@@ -33,23 +41,9 @@ internal static class AdvisoryLockHelper
     /// </summary>
     public static async Task ReleaseAsync(MeepleAiDbContext db, ILogger logger, CancellationToken ct = default)
     {
-        await db.Database.ExecuteSqlRawAsync(ReleaseLockSql, ct).ConfigureAwait(false);
+        await db.Database
+            .ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({SeedingLockKey})", ct)
+            .ConfigureAwait(false);
         logger.LogInformation("Seeding advisory lock released");
-    }
-
-    /// <summary>
-    /// Deterministic hash code that doesn't change across app restarts (.NET randomizes GetHashCode).
-    /// </summary>
-    private static long GetDeterministicHashCode(string str)
-    {
-        unchecked
-        {
-            long hash = 5381;
-            foreach (var c in str)
-            {
-                hash = ((hash << 5) + hash) ^ c;
-            }
-            return hash;
-        }
     }
 }

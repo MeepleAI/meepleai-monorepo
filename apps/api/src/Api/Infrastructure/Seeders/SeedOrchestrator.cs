@@ -7,18 +7,22 @@ namespace Api.Infrastructure.Seeders;
 
 /// <summary>
 /// Entry point for all seeding operations. Replaces AutoConfigurationService.
-/// Resolves profile, acquires advisory lock, runs ISeedLayer implementations in order.
+/// Resolves profile, acquires non-blocking advisory lock, runs ISeedLayer implementations in order.
+/// Clears ChangeTracker between layers to prevent entity leaks.
 /// </summary>
 internal sealed class SeedOrchestrator
 {
     private readonly IEnumerable<ISeedLayer> _layers;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<SeedOrchestrator> _logger;
 
     public SeedOrchestrator(
         IEnumerable<ISeedLayer> layers,
+        IConfiguration configuration,
         ILogger<SeedOrchestrator> logger)
     {
         _layers = layers;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -28,7 +32,7 @@ internal sealed class SeedOrchestrator
     /// </summary>
     public async Task RunAsync(MeepleAiDbContext db, IServiceProvider services, CancellationToken ct = default)
     {
-        var profile = ResolveProfile(services.GetService(typeof(IConfiguration)) as IConfiguration);
+        var profile = ResolveProfile(_configuration);
 
         if (profile == SeedProfile.None)
         {
@@ -39,21 +43,32 @@ internal sealed class SeedOrchestrator
         _logger.LogInformation("Seeding with profile: {Profile}", profile);
         var sw = Stopwatch.StartNew();
 
-        await AdvisoryLockHelper.AcquireAsync(db, _logger, ct).ConfigureAwait(false);
+        var lockAcquired = await AdvisoryLockHelper.TryAcquireAsync(db, _logger, ct).ConfigureAwait(false);
+        if (!lockAcquired)
+            return;
+
         try
         {
-            var adminUser = await db.Users
-                .FirstOrDefaultAsync(u => u.Role == "admin", ct)
-                .ConfigureAwait(false);
-            var systemUserId = adminUser?.Id ?? Guid.Empty;
+            var layers = FilterLayers(_layers, profile);
+            _logger.LogInformation("Running {Count} seed layer(s)", layers.Count);
 
-            var context = new SeedContext(profile, db, services, _logger, systemUserId);
+            // Resolve systemUserId — may be Guid.Empty on fresh DB before Core seeds admin
+            var systemUserId = await ResolveSystemUserIdAsync(db, ct).ConfigureAwait(false);
 
-            foreach (var layer in FilterLayers(_layers, profile))
+            foreach (var layer in layers)
             {
                 _logger.LogInformation("Running seed layer: {Layer} (min profile: {MinProfile})",
                     layer.Name, layer.MinimumProfile);
+
+                var context = new SeedContext(profile, db, services, _logger, systemUserId);
                 await layer.SeedAsync(context, ct).ConfigureAwait(false);
+
+                // Clear ChangeTracker between layers to prevent entity leaks
+                db.ChangeTracker.Clear();
+
+                // Re-resolve systemUserId after Core layer creates admin user
+                if (layer.MinimumProfile == SeedProfile.Prod)
+                    systemUserId = await ResolveSystemUserIdAsync(db, ct).ConfigureAwait(false);
             }
 
             _logger.LogInformation("Seeding completed in {Elapsed}ms", sw.ElapsedMilliseconds);
@@ -84,8 +99,17 @@ internal sealed class SeedOrchestrator
     }
 
     /// <summary>
-    /// Filter layers by profile ordinal: layer runs if MinimumProfile &lt;= active profile.
+    /// Filter layers by profile ordinal and materialize to list.
+    /// A layer runs if MinimumProfile &lt;= active profile.
     /// </summary>
-    internal static IEnumerable<ISeedLayer> FilterLayers(IEnumerable<ISeedLayer> layers, SeedProfile profile)
-        => layers.Where(l => l.MinimumProfile <= profile).OrderBy(l => l.MinimumProfile);
+    internal static IReadOnlyList<ISeedLayer> FilterLayers(IEnumerable<ISeedLayer> layers, SeedProfile profile)
+        => layers.Where(l => l.MinimumProfile <= profile).OrderBy(l => l.MinimumProfile).ToList();
+
+    private static async Task<Guid> ResolveSystemUserIdAsync(MeepleAiDbContext db, CancellationToken ct)
+    {
+        var adminUser = await db.Users
+            .FirstOrDefaultAsync(u => u.Role == "admin", ct)
+            .ConfigureAwait(false);
+        return adminUser?.Id ?? Guid.Empty;
+    }
 }

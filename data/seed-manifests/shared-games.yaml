@@ -33,7 +33,7 @@ games:
   - title: "Carcassonne"
     bggId: 822
     language: en
-    pdfFile: "carcassone_rulebook.pdf"
+    pdfFile: "carcassonne_rulebook.pdf"
     imageUrl: "https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__original/img/bP18m_PYjyFOv1IBGgMOteQUneA=/0x0/filters:format(jpeg)/pic8621446.jpg"
     thumbnailUrl: "https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__small/img/oEEslN-EGqh82sNI6Aj4_MFXYg0=/fit-in/200x150/filters:strip_icc()/pic8621446.jpg"
 
