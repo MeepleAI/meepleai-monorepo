@@ -367,6 +367,22 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     [activeSession]
   );
 
+  // ----- Activity events (scores → feed items, newest first) -----
+  // Must be above early returns to satisfy rules-of-hooks
+  const activityEvents = useMemo<ActivityEvent[]>(() => {
+    if (!activeSession) return [];
+    return scores
+      .map(s => ({
+        id: `score-${s.playerId}-${s.round}-${s.dimension}`,
+        type: 'score' as const,
+        playerName: activeSession.players.find(p => p.id === s.playerId)?.displayName ?? '?',
+        value: s.value,
+        dimension: s.dimension,
+        timestamp: s.recordedAt ?? new Date().toISOString(),
+      }))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [scores, activeSession]);
+
   // ----- Loading / Error states -----
   if (isLoading && !activeSession) {
     return (
@@ -398,21 +414,6 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const scoreboardData = toScoreboardData(activeSession, scores, null);
   const roundNumbers = scores.map(s => s.round);
   const currentRound = roundNumbers.length > 0 ? Math.max(1, ...roundNumbers) : 1;
-
-  // ----- Activity events (scores → feed items, newest first) -----
-  const activityEvents = useMemo<ActivityEvent[]>(() => {
-    if (!activeSession) return [];
-    return scores
-      .map(s => ({
-        id: `score-${s.playerId}-${s.round}-${s.dimension}`,
-        type: 'score' as const,
-        playerName: activeSession.players.find(p => p.id === s.playerId)?.displayName ?? '?',
-        value: s.value,
-        dimension: s.dimension,
-        timestamp: s.recordedAt ?? new Date().toISOString(),
-      }))
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [scores, activeSession]);
 
   // ----- Shared sub-sections (used in both layouts) -----
 
