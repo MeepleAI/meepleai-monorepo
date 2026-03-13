@@ -319,6 +319,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5510: PII detection and redaction for OpenRouter-bound prompts
         services.AddOptions<PiiDetectorOptions>();
         services.AddSingleton<IPiiDetector, PiiDetector>();
+
+        // E4-1: Degraded agent service — BGG-only mode when no KB cards are available
+        services.AddScoped<IDegradedAgentService, DegradedAgentService>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)
