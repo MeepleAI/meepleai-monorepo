@@ -2,6 +2,7 @@ using System.Globalization;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.UserLibrary;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -110,11 +111,14 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         var photosThisSession = await GetRedisCounterAsync(userId, TierAction.UploadSessionPhoto).ConfigureAwait(false);
         var catalogProposals = await GetRedisCounterAsync(userId, TierAction.ProposeToSharedCatalog).ConfigureAwait(false);
 
-        // Phase 2 scope: replace with SQL COUNT via IGameRepository.CountUserGamesAsync(userId)
-        // and IAgentRepository.CountUserAgentsAsync(userId) when the tier CQRS layer is added.
-        // Hardcoded to 0 for now — count-based enforcement is not yet wired.
-        var privateGames = 0;
-        var agents = 0;
+        // E2-2: Count-based metrics from database
+        var privateGames = await _dbContext.PrivateGames
+            .CountAsync(g => g.OwnerId == userId, ct)
+            .ConfigureAwait(false);
+
+        var agents = await _dbContext.Agents
+            .CountAsync(a => a.CreatedByUserId == userId, ct)
+            .ConfigureAwait(false);
 
         return new UsageSnapshot(
             PrivateGames: privateGames,
