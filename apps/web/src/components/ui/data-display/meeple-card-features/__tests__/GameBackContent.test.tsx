@@ -196,9 +196,21 @@ describe('Stats Row', () => {
     expect(screen.getByText('45m')).toBeInTheDocument();
   });
 
+  it('renders totalPlayTimeMinutes=0 as "0m"', () => {
+    renderComponent({ totalPlayTimeMinutes: 0, timesPlayed: undefined, winRate: undefined, lastPlayedLabel: undefined });
+    expect(screen.getByTestId('stats-row')).toBeInTheDocument();
+    expect(screen.getByText('0m')).toBeInTheDocument();
+  });
+
   it('renders lastPlayedLabel in stats row', () => {
     renderComponent({ lastPlayedLabel: '2 giorni fa', timesPlayed: 5 });
     expect(screen.getByText('2 giorni fa')).toBeInTheDocument();
+  });
+
+  it('renders stats row with only lastPlayedLabel (no numeric stats)', () => {
+    renderComponent({ timesPlayed: undefined, winRate: undefined, totalPlayTimeMinutes: undefined, lastPlayedLabel: 'Ieri' });
+    expect(screen.getByTestId('stats-row')).toBeInTheDocument();
+    expect(screen.getByText('Ieri')).toBeInTheDocument();
   });
 
   it('hides stats row when all stats are undefined/null', () => {
