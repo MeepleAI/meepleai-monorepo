@@ -51,6 +51,10 @@ internal class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
             .HasColumnType("jsonb")
             .IsRequired(false);
 
+        // Issue #326: Onboarding completion tracking
+        builder.Property(e => e.HasCompletedOnboarding).IsRequired().HasDefaultValue(false);
+        builder.Property(e => e.OnboardingCompletedAt).IsRequired(false);
+
         // Relationships
         builder.HasMany(e => e.Sessions)
             .WithOne(s => s.User)

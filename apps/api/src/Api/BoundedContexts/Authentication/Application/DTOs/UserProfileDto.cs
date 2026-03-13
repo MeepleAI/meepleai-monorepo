@@ -15,5 +15,6 @@ internal record UserProfileDto(
     string Language,
     string Theme,
     bool EmailNotifications,
-    int DataRetentionDays
+    int DataRetentionDays,
+    bool HasCompletedOnboarding
 );

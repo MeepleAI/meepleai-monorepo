@@ -39,7 +39,8 @@ internal class GetUserProfileQueryHandler : IQueryHandler<GetUserProfileQuery, U
             Language: user.Language,
             Theme: user.Theme,
             EmailNotifications: user.EmailNotifications,
-            DataRetentionDays: user.DataRetentionDays
+            DataRetentionDays: user.DataRetentionDays,
+            HasCompletedOnboarding: user.HasCompletedOnboarding
         );
     }
 }

@@ -492,6 +492,16 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
       );
       return result ?? { activities: [], totalCount: 0 };
     },
+
+    /** Save onboarding interests (Issue #326) */
+    async saveUserInterests(interests: string[]): Promise<{ ok: boolean }> {
+      return httpClient.post('/api/v1/auth/onboarding/interests', { interests });
+    },
+
+    /** Mark onboarding as completed (Issue #326) */
+    async completeOnboarding(): Promise<{ ok: boolean }> {
+      return httpClient.post('/api/v1/auth/onboarding/complete', {});
+    },
   };
 }
 

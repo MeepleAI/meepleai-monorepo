@@ -101,7 +101,10 @@ public class UserRepository : RepositoryBase, IUserRepository
             // ISSUE-3672: Email Verification
             EmailVerified = entity.EmailVerified,
             EmailVerifiedAt = entity.EmailVerifiedAt,
-            VerificationGracePeriodEndsAt = entity.VerificationGracePeriodEndsAt
+            VerificationGracePeriodEndsAt = entity.VerificationGracePeriodEndsAt,
+            // ISSUE-326: Onboarding completion
+            HasCompletedOnboarding = entity.HasCompletedOnboarding,
+            OnboardingCompletedAt = entity.OnboardingCompletedAt
         };
 
         // Map backup codes
@@ -171,6 +174,10 @@ public class UserRepository : RepositoryBase, IUserRepository
         existingUser.EmailVerified = entity.EmailVerified;
         existingUser.EmailVerifiedAt = entity.EmailVerifiedAt;
         existingUser.VerificationGracePeriodEndsAt = entity.VerificationGracePeriodEndsAt;
+
+        // ISSUE-326: Update onboarding state
+        existingUser.HasCompletedOnboarding = entity.HasCompletedOnboarding;
+        existingUser.OnboardingCompletedAt = entity.OnboardingCompletedAt;
 
         // Synchronize backup codes collection (delete old, add new)
         // This ensures we don't duplicate codes on every update
@@ -310,6 +317,12 @@ public class UserRepository : RepositoryBase, IUserRepository
             entity.EmailVerified,
             entity.EmailVerifiedAt,
             entity.VerificationGracePeriodEndsAt);
+
+        // ISSUE-326: Restore onboarding state
+        if (entity.HasCompletedOnboarding)
+        {
+            user.RestoreOnboardingState(entity.HasCompletedOnboarding, entity.OnboardingCompletedAt);
+        }
 
         return user;
     }

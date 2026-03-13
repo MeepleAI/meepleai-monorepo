@@ -16,6 +16,7 @@ import { useCallback, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 import { FirstAgentStep } from './FirstAgentStep';
@@ -85,11 +86,14 @@ export function OnboardingWizard({ token, role: _role }: OnboardingWizardProps) 
   }, []);
 
   const handleFinish = useCallback(() => {
+    api.auth.completeOnboarding().catch(() => {});
     router.push('/chat');
   }, [router]);
 
   const handleSkipWizard = useCallback(() => {
     if (state.passwordCompleted) {
+      // Skipping still counts as "completed" — user chose to skip
+      api.auth.completeOnboarding().catch(() => {});
       router.push('/chat');
     }
   }, [router, state.passwordCompleted]);

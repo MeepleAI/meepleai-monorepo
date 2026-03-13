@@ -58,6 +58,10 @@ public sealed class User : AggregateRoot<Guid>
     // Onboarding preferences (Issue #124: Invitation system)
     public List<string>? Interests { get; private set; }
 
+    // Onboarding completion tracking (Issue #326: Reminder banner)
+    public bool HasCompletedOnboarding { get; private set; }
+    public DateTime? OnboardingCompletedAt { get; private set; }
+
     // Navigation properties (not part of domain model, for EF Core only)
     private readonly List<Session> _sessions = new();
     private readonly List<ApiKey> _apiKeys = new();
@@ -665,6 +669,16 @@ public sealed class User : AggregateRoot<Guid>
         Interests = interests;
     }
 
+    /// <summary>
+    /// Marks the onboarding wizard as completed.
+    /// Issue #326: Tracks completion for reminder banner logic.
+    /// </summary>
+    public void CompleteOnboarding()
+    {
+        HasCompletedOnboarding = true;
+        OnboardingCompletedAt = DateTime.UtcNow;
+    }
+
     #region Persistence Hydration Methods (internal - S3011 fix)
 
     /// <summary>
@@ -789,6 +803,16 @@ public sealed class User : AggregateRoot<Guid>
         EmailVerified = emailVerified;
         EmailVerifiedAt = emailVerifiedAt;
         VerificationGracePeriodEndsAt = verificationGracePeriodEndsAt;
+    }
+
+    /// <summary>
+    /// Restores onboarding completion state from persistence.
+    /// Issue #326: Reminder banner for skipped wizard.
+    /// </summary>
+    internal void RestoreOnboardingState(bool hasCompletedOnboarding, DateTime? onboardingCompletedAt)
+    {
+        HasCompletedOnboarding = hasCompletedOnboarding;
+        OnboardingCompletedAt = onboardingCompletedAt;
     }
 
     #endregion

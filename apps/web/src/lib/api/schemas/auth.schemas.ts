@@ -165,6 +165,8 @@ export const UserProfileSchema = z.object({
   dataRetentionDays: z.number().int().positive(),
   // Avatar URL (Issue #2882)
   avatarUrl: z.string().url().nullable().optional(),
+  // Onboarding completion (Issue #326)
+  hasCompletedOnboarding: z.boolean().optional().default(false),
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;

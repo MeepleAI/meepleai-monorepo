@@ -55,6 +55,10 @@ public class UserEntity
     // Issue #124: Onboarding interests
     public List<string>? Interests { get; set; }
 
+    // Issue #326: Onboarding completion tracking
+    public bool HasCompletedOnboarding { get; set; }
+    public DateTime? OnboardingCompletedAt { get; set; }
+
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();

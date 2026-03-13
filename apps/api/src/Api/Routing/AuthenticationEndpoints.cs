@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Configuration;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
@@ -24,6 +25,8 @@ using LogoutAllDevicesCommand = Api.BoundedContexts.Authentication.Application.C
 using GetSessionByTokenHashQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionByTokenHashQuery;
 using AcceptInvitationCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.AcceptInvitationCommand;
 using ValidateInvitationTokenQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.ValidateInvitationTokenQuery;
+using CompleteOnboardingCommand = Api.BoundedContexts.Authentication.Application.Commands.UserProfile.CompleteOnboardingCommand;
+using SaveUserInterestsCommand = Api.BoundedContexts.Authentication.Application.Commands.UserProfile.SaveUserInterestsCommand;
 
 namespace Api.Routing;
 
@@ -61,6 +64,9 @@ internal static class AuthenticationEndpoints
         // ISSUE-124: Invitation acceptance endpoints (public, unauthenticated)
         MapAcceptInvitationEndpoint(group);
         MapValidateInvitationEndpoint(group);
+
+        // ISSUE-326: Onboarding endpoints (authenticated)
+        MapOnboardingEndpoints(group);
 
         return group;
     }
@@ -687,6 +693,49 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
         .Produces(200)
         .Produces(400);
     }
+
+    // ISSUE-326: Onboarding endpoints (authenticated)
+    private static void MapOnboardingEndpoints(RouteGroupBuilder group)
+    {
+        group.MapPost("/auth/onboarding/interests", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var payload = await context.Request.ReadFromJsonAsync<SaveInterestsPayload>(ct).ConfigureAwait(false);
+            if (payload?.Interests == null)
+                return Results.BadRequest(new { error = "Interests list is required" });
+
+            await mediator.Send(new SaveUserInterestsCommand(session.User!.Id, payload.Interests), ct).ConfigureAwait(false);
+            return Results.Ok(new { ok = true });
+        })
+        .RequireSession()
+        .WithName("SaveUserInterests")
+        .WithTags("Authentication", "Onboarding")
+        .WithSummary("Save user interest selections during onboarding")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+
+        group.MapPost("/auth/onboarding/complete", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            await mediator.Send(new CompleteOnboardingCommand(session.User!.Id), ct).ConfigureAwait(false);
+            return Results.Ok(new { ok = true });
+        })
+        .RequireSession()
+        .WithName("CompleteOnboarding")
+        .WithTags("Authentication", "Onboarding")
+        .WithSummary("Mark onboarding wizard as completed")
+        .Produces(200)
+        .Produces(401);
+    }
 }
 
 /// <summary>
@@ -698,3 +747,8 @@ internal record AcceptInvitationPayload(string Token, string Password, string Co
 /// Payload for validating an invitation token (Issue #124).
 /// </summary>
 internal record ValidateInvitationPayload(string Token);
+
+/// <summary>
+/// Payload for saving onboarding interests (Issue #326).
+/// </summary>
+internal record SaveInterestsPayload(List<string> Interests);

@@ -57,7 +57,8 @@ internal class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferenc
             user.Language,
             user.Theme,
             user.EmailNotifications,
-            user.DataRetentionDays
+            user.DataRetentionDays,
+            user.HasCompletedOnboarding
         );
     }
 }

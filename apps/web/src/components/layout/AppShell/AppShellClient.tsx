@@ -14,6 +14,7 @@
 import { type ReactNode, Suspense } from 'react';
 
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
+import { OnboardingReminderBanner } from '@/components/onboarding';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
@@ -69,6 +70,9 @@ export function AppShellClient({
 
         {/* L1: TopNavbar (always visible) */}
         <TopNavbar />
+
+        {/* Onboarding reminder (Issue #326) */}
+        {isAuthenticated && <OnboardingReminderBanner />}
 
         {/* Desktop Sidebar (authenticated only) */}
         {isAuthenticated && <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />}
