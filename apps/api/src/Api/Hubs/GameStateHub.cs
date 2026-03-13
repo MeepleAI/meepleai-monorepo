@@ -10,8 +10,10 @@ namespace Api.Hubs;
 
 /// <summary>
 /// SignalR hub for real-time game state synchronization across clients.
+/// Supports both JWT-authenticated users and guest participants (via session token).
 /// </summary>
-[Authorize]
+[Authorize(AuthenticationSchemes = "Bearer,SessionToken")]
+[AllowAnonymous]
 public class GameStateHub : Hub
 {
     private readonly ILogger<GameStateHub> _logger;

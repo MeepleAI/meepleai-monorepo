@@ -77,7 +77,10 @@ internal sealed class JoinSessionCommandHandler : IRequestHandler<JoinSessionCom
         SessionParticipant participant;
         if (request.UserId.HasValue)
         {
-            participant = SessionParticipant.CreateRegistered(invite.SessionId, request.UserId.Value, ParticipantRole.Player);
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == request.UserId.Value, cancellationToken)
+                .ConfigureAwait(false);
+            var displayName = user?.DisplayName ?? user?.Email;
+            participant = SessionParticipant.CreateRegistered(invite.SessionId, request.UserId.Value, ParticipantRole.Player, displayName);
         }
         else
         {
