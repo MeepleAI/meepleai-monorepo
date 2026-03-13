@@ -10,23 +10,13 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "chat_language",
-                schema: "knowledge_base",
-                table: "agent_definitions",
-                type: "character varying(10)",
-                maxLength: 10,
-                nullable: false,
-                defaultValue: "auto");
+            // Stubbed: changes moved into BetaV0InitialCreate
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "chat_language",
-                schema: "knowledge_base",
-                table: "agent_definitions");
+            // Stubbed: changes moved into BetaV0InitialCreate
         }
     }
 }
