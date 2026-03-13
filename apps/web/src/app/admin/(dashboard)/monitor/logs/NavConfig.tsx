@@ -1,27 +1,35 @@
 'use client';
 
 /**
- * LogsNavConfig — sets breadcrumb/nav for the Log Viewer page
+ * LogsNavConfig — Registers ActionBar actions for /admin/monitor/logs
  * Issue #140
  */
 
 import { useEffect } from 'react';
 
+import { RefreshCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
 import { useSetNavConfig } from '@/hooks/useSetNavConfig';
 
-export function LogsNavConfig(): null {
+export function LogsNavConfig() {
   const setNavConfig = useSetNavConfig();
+  const router = useRouter();
 
   useEffect(() => {
     setNavConfig({
-      title: 'Log Viewer',
-      breadcrumbs: [
-        { label: 'Admin', href: '/admin' },
-        { label: 'Monitor', href: '/admin/monitor' },
-        { label: 'Log Viewer' },
+      miniNav: [],
+      actionBar: [
+        {
+          id: 'refresh',
+          label: 'Refresh',
+          icon: RefreshCw,
+          variant: 'primary',
+          onClick: () => router.refresh(),
+        },
       ],
     });
-  }, [setNavConfig]);
+  }, [setNavConfig, router]);
 
   return null;
 }
