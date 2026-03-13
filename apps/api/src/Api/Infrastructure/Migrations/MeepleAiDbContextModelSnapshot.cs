@@ -10136,7 +10136,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.ToTable("user_collection_entries", null, t =>
                         {
-                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "[EntityType] IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
+                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "\"EntityType\" IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
                         });
                 });
 

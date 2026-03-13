@@ -70,7 +70,7 @@ internal class UserCollectionEntryEntityConfiguration : IEntityTypeConfiguration
         // CHECK constraint: EntityType must be one of the allowed values
         builder.ToTable(t => t.HasCheckConstraint(
             "CK_UserCollectionEntries_EntityType",
-            "[EntityType] IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')"));
+            "\"EntityType\" IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')"));
 
         // Relationships
         builder.HasOne(e => e.User)
