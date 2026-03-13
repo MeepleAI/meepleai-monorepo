@@ -10,7 +10,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { ContainerInfo, ContainerLogs } from '@/lib/api/schemas';
 
-export function LogViewer(): JSX.Element {
+export function LogViewer() {
   const [containers, setContainers] = useState<ContainerInfo[]>([]);
   const [selectedContainer, setSelectedContainer] = useState<string | null>(null);
   const [logs, setLogs] = useState<ContainerLogs | null>(null);

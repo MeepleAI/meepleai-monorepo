@@ -8,7 +8,7 @@
 import { LogViewer } from './LogViewer';
 import { LogsNavConfig } from './NavConfig';
 
-export default function LogViewerPage(): JSX.Element {
+export default function LogViewerPage() {
   return (
     <div data-testid="logs-page" className="space-y-6">
       <LogsNavConfig />
