@@ -95,7 +95,7 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
         {/* Hero Card */}
         <section className="mb-8 flex justify-center">
           <MeepleCard
-            entity="document"
+            entity="kb"
             variant="hero"
             title={document.fileName}
             subtitle={document.gameName ? `Gioco: ${document.gameName}` : 'Knowledge Base'}
