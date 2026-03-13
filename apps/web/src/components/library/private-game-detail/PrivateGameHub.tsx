@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { PlayerSetupDialog, type PlayerSetup } from '@/components/game-night/PlayerSetupDialog';
 import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
 import { PdfProcessingProgressBar } from '@/components/pdf/PdfProcessingProgressBar';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -32,6 +33,8 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showTryQuestion, setShowTryQuestion] = useState(false);
+  const [showPlayerSetup, setShowPlayerSetup] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<PdfStatus>('none');
   const [activePdfId, setActivePdfId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -172,19 +175,42 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
     }
   }, [privateGameId]);
 
-  const handleStartGame = useCallback(async () => {
-    try {
-      const sessionId = await api.liveSessions.createSession({
-        gameId: privateGameId,
-        gameName: game?.title,
-      });
-      router.push(`/sessions/${sessionId}/play`);
-    } catch {
-      toast.error('Impossibile avviare la partita', {
-        description: 'Riprova tra qualche secondo.',
-      });
-    }
-  }, [privateGameId, game?.title, router]);
+  const handleStartGame = useCallback(() => {
+    setShowPlayerSetup(true);
+  }, []);
+
+  const handlePlayerSetupComplete = useCallback(
+    async (players: PlayerSetup[]) => {
+      setIsStarting(true);
+      try {
+        const sessionId = await api.liveSessions.createSession({
+          gameId: privateGameId,
+          gameName: game?.title,
+        });
+
+        // Add players to session
+        for (const player of players) {
+          await api.liveSessions.addPlayer(sessionId, {
+            displayName: player.displayName,
+            color: player.color,
+          });
+        }
+
+        // Start the session (Created → InProgress)
+        await api.liveSessions.startSession(sessionId);
+
+        setShowPlayerSetup(false);
+        router.push(`/sessions/${sessionId}/play`);
+      } catch {
+        toast.error('Impossibile avviare la partita', {
+          description: 'Riprova tra qualche secondo.',
+        });
+      } finally {
+        setIsStarting(false);
+      }
+    },
+    [privateGameId, game?.title, router]
+  );
 
   const handleResumeSession = useCallback(
     async (sessionId: string) => {
@@ -330,6 +356,16 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
           </div>
         </SheetContent>
       </Sheet>
+
+      <PlayerSetupDialog
+        open={showPlayerSetup}
+        onOpenChange={setShowPlayerSetup}
+        gameName={game?.title ?? 'Gioco'}
+        minPlayers={game?.minPlayers ?? 1}
+        maxPlayers={game?.maxPlayers ?? 10}
+        onStart={handlePlayerSetupComplete}
+        isLoading={isStarting}
+      />
     </div>
   );
 }
