@@ -9,20 +9,32 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dia
 import { Input } from '@/components/ui/primitives/input';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 
-const PLAYER_COLORS: ReadonlyArray<{ name: PlayerColor; hex: string }> = [
-  { name: 'Red', hex: '#ef4444' },
-  { name: 'Blue', hex: '#3b82f6' },
-  { name: 'Green', hex: '#22c55e' },
-  { name: 'Yellow', hex: '#eab308' },
-  { name: 'Purple', hex: '#a855f7' },
-  { name: 'Orange', hex: '#f97316' },
-  { name: 'Pink', hex: '#ec4899' },
-  { name: 'Teal', hex: '#14b8a6' },
-];
+/**
+ * Color palette for player tokens.
+ * Matches the backend PlayerColor enum + White/Black from PlayerColorSchema.
+ * `label` is the Italian display name; `name` is the API enum value.
+ */
+const PLAYER_COLORS = [
+  { name: 'Red', label: 'Rosso', hex: '#ef4444' },
+  { name: 'Blue', label: 'Blu', hex: '#3b82f6' },
+  { name: 'Green', label: 'Verde', hex: '#22c55e' },
+  { name: 'Yellow', label: 'Giallo', hex: '#eab308' },
+  { name: 'Purple', label: 'Viola', hex: '#a855f7' },
+  { name: 'Orange', label: 'Arancione', hex: '#f97316' },
+  { name: 'Pink', label: 'Rosa', hex: '#ec4899' },
+  { name: 'Teal', label: 'Acquamarina', hex: '#14b8a6' },
+  { name: 'White', label: 'Bianco', hex: '#ffffff' },
+  { name: 'Black', label: 'Nero', hex: '#1f2937' },
+] as const;
 
 export interface PlayerSetup {
   displayName: string;
   color: PlayerColor;
+}
+
+/** Internal representation with a stable id for React keys. */
+interface PlayerEntry extends PlayerSetup {
+  id: string;
 }
 
 interface PlayerSetupDialogProps {
@@ -44,32 +56,37 @@ export function PlayerSetupDialog({
   onStart,
   isLoading,
 }: PlayerSetupDialogProps) {
-  const [players, setPlayers] = useState<PlayerSetup[]>([
-    { displayName: '', color: PLAYER_COLORS[0].name },
+  const [players, setPlayers] = useState<PlayerEntry[]>([
+    { id: crypto.randomUUID(), displayName: '', color: PLAYER_COLORS[0].name },
   ]);
 
+  // Issue 2 fix: guard and color computation inside functional updater
+  // so `players` is not a stale closure dependency.
   const addPlayer = useCallback(() => {
-    if (players.length >= maxPlayers) return;
-    const usedColors = new Set(players.map(p => p.color));
-    const nextColor =
-      PLAYER_COLORS.find(c => !usedColors.has(c.name))?.name ?? PLAYER_COLORS[0].name;
-    setPlayers(prev => [...prev, { displayName: '', color: nextColor }]);
-  }, [players, maxPlayers]);
+    setPlayers(prev => {
+      if (prev.length >= maxPlayers) return prev;
+      const usedColors = new Set(prev.map(p => p.color));
+      const nextColor =
+        PLAYER_COLORS.find(c => !usedColors.has(c.name))?.name ?? PLAYER_COLORS[0].name;
+      return [...prev, { id: crypto.randomUUID(), displayName: '', color: nextColor }];
+    });
+  }, [maxPlayers]);
 
-  const removePlayer = useCallback((index: number) => {
-    setPlayers(prev => prev.filter((_, i) => i !== index));
+  const removePlayer = useCallback((id: string) => {
+    setPlayers(prev => prev.filter(p => p.id !== id));
   }, []);
 
-  const updatePlayerName = useCallback((index: number, value: string) => {
-    setPlayers(prev => prev.map((p, i) => (i === index ? { ...p, displayName: value } : p)));
-  }, []);
-
-  const updatePlayerColor = useCallback((index: number, value: PlayerColor) => {
-    setPlayers(prev => prev.map((p, i) => (i === index ? { ...p, color: value } : p)));
+  const updatePlayer = useCallback((id: string, field: keyof PlayerSetup, value: string) => {
+    setPlayers(prev => prev.map(p => (p.id === id ? { ...p, [field]: value as PlayerColor } : p)));
   }, []);
 
   const validPlayers = players.filter(p => p.displayName.trim().length > 0);
   const canStart = validPlayers.length >= Math.max(1, minPlayers);
+
+  // Issue 1 fix: strip internal `id` before passing to consumer
+  const handleStart = useCallback(() => {
+    onStart(validPlayers.map(({ displayName, color }) => ({ displayName, color })));
+  }, [onStart, validPlayers]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -84,8 +101,9 @@ export function PlayerSetupDialog({
             Aggiungi i giocatori ({minPlayers}&ndash;{maxPlayers} giocatori).
           </p>
 
-          {players.map((player, i) => (
-            <div key={i} className="flex items-center gap-2">
+          {/* Issue 1 fix: use stable player.id as key instead of array index */}
+          {players.map(player => (
+            <div key={player.id} className="flex items-center gap-2">
               <div
                 className="h-6 w-6 rounded-full flex-shrink-0 border"
                 style={{
@@ -95,19 +113,20 @@ export function PlayerSetupDialog({
               />
               <Input
                 value={player.displayName}
-                onChange={e => updatePlayerName(i, e.target.value)}
+                onChange={e => updatePlayer(player.id, 'displayName', e.target.value)}
                 placeholder="Nome giocatore"
                 className="flex-1"
               />
+              {/* Issue 7 fix: show Italian label, send API enum value */}
               <select
                 value={player.color}
-                onChange={e => updatePlayerColor(i, e.target.value as PlayerColor)}
+                onChange={e => updatePlayer(player.id, 'color', e.target.value)}
                 className="text-xs border rounded px-2 py-1.5 bg-background"
-                aria-label={`Colore giocatore ${i + 1}`}
+                aria-label={`Colore giocatore ${players.indexOf(player) + 1}`}
               >
                 {PLAYER_COLORS.map(c => (
                   <option key={c.name} value={c.name}>
-                    {c.name}
+                    {c.label}
                   </option>
                 ))}
               </select>
@@ -116,7 +135,7 @@ export function PlayerSetupDialog({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => removePlayer(i)}
+                  onClick={() => removePlayer(player.id)}
                 >
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
                 </Button>
@@ -137,7 +156,7 @@ export function PlayerSetupDialog({
             <Button
               size="sm"
               disabled={!canStart || isLoading}
-              onClick={() => onStart(validPlayers)}
+              onClick={handleStart}
               className="bg-amber-600 hover:bg-amber-700 text-white"
             >
               {isLoading ? (

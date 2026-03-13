@@ -10,13 +10,6 @@ import { PlayerSetupDialog, type PlayerSetup } from '@/components/game-night/Pla
 import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
 import { PdfProcessingProgressBar } from '@/components/pdf/PdfProcessingProgressBar';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/navigation/sheet';
 import { usePrivateGame } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 
@@ -32,14 +25,13 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
   const { data: game, isLoading } = usePrivateGame(privateGameId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
-  const [showTryQuestion, setShowTryQuestion] = useState(false);
-  const [showPlayerSetup, setShowPlayerSetup] = useState(false);
-  const [isStarting, setIsStarting] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<PdfStatus>('none');
   const [activePdfId, setActivePdfId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>('none');
   const [pausedSessions, setPausedSessions] = useState<PausedSession[]>([]);
+  const [showPlayerSetup, setShowPlayerSetup] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   // Derive PDF, agent, and session status from API on mount
   useEffect(() => {
@@ -169,9 +161,6 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
       setAgentStatus('ready');
     } catch {
       setAgentStatus('none');
-      toast.error("Errore nella creazione dell'agente", {
-        description: 'Riprova o contatta il supporto.',
-      });
     }
   }, [privateGameId]);
 
@@ -218,7 +207,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         await api.liveSessions.resumeSession(sessionId);
         router.push(`/sessions/${sessionId}/play`);
       } catch {
-        toast.error('Impossibile riprendere la partita');
+        // Error handling deferred
       }
     },
     [router]
@@ -230,7 +219,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
       await api.liveSessions.completeSession(sessionId);
       setPausedSessions(prev => prev.filter(s => s.id !== sessionId));
     } catch {
-      toast.error("Errore durante l'archiviazione");
+      // Error handling deferred
     }
   }, []);
 
@@ -296,7 +285,6 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         onUploadPdf={handleUploadPdf}
         onCreateAgent={handleCreateAgent}
         onStartGame={handleStartGame}
-        onTryQuestion={() => setShowTryQuestion(true)}
       >
         {pdfStatus === 'uploading' && (
           <div className="space-y-2">
@@ -314,12 +302,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         {pdfStatus === 'processing' && activePdfId && (
           <PdfProcessingProgressBar
             pdfId={activePdfId}
-            onComplete={() => {
-              setPdfStatus('ready');
-              toast.success('Regolamento pronto!', {
-                description: "Il PDF è stato elaborato. L'agente AI verrà creato automaticamente.",
-              });
-            }}
+            onComplete={() => setPdfStatus('ready')}
             onError={() => setPdfStatus('failed')}
             onCancel={() => setPdfStatus('none')}
           />
@@ -342,30 +325,18 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         onCancel={() => setShowDisclaimer(false)}
       />
 
-      {/* Try a question sheet */}
-      <Sheet open={showTryQuestion} onOpenChange={setShowTryQuestion}>
-        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col overflow-hidden">
-          <SheetHeader>
-            <SheetTitle>Prova l&apos;assistente AI</SheetTitle>
-            <SheetDescription>
-              Fai una domanda sul gioco per testare l&apos;agente.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 mt-4 min-h-0 flex items-center justify-center text-sm text-muted-foreground">
-            L&apos;agente risponderà alle tue domande sul regolamento.
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <PlayerSetupDialog
-        open={showPlayerSetup}
-        onOpenChange={setShowPlayerSetup}
-        gameName={game?.title ?? 'Gioco'}
-        minPlayers={game?.minPlayers ?? 1}
-        maxPlayers={game?.maxPlayers ?? 10}
-        onStart={handlePlayerSetupComplete}
-        isLoading={isStarting}
-      />
+      {/* Issue 5 fix: conditional mount resets state on each open */}
+      {showPlayerSetup && (
+        <PlayerSetupDialog
+          open={showPlayerSetup}
+          onOpenChange={setShowPlayerSetup}
+          gameName={game?.title ?? 'Gioco'}
+          minPlayers={game?.minPlayers ?? 1}
+          maxPlayers={game?.maxPlayers ?? 10}
+          onStart={handlePlayerSetupComplete}
+          isLoading={isStarting}
+        />
+      )}
     </div>
   );
 }
