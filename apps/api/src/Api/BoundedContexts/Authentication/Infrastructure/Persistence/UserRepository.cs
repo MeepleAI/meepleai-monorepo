@@ -183,6 +183,11 @@ public class UserRepository : RepositoryBase, IUserRepository
         existingUser.OnboardingWizardSeenAt = entity.OnboardingWizardSeenAt;
         existingUser.OnboardingDismissedAt = entity.OnboardingDismissedAt;
 
+        // Issue #323: Update onboarding state
+        existingUser.OnboardingCompleted = entity.OnboardingCompleted;
+        existingUser.OnboardingSkipped = entity.OnboardingSkipped;
+        existingUser.OnboardingCompletedAt = entity.OnboardingCompletedAt;
+
         // Synchronize backup codes collection (delete old, add new)
         // This ensures we don't duplicate codes on every update
         existingUser.BackupCodes.Clear();
@@ -328,6 +333,12 @@ public class UserRepository : RepositoryBase, IUserRepository
             entity.Bio,
             entity.OnboardingWizardSeenAt,
             entity.OnboardingDismissedAt);
+
+        // Issue #323: Restore onboarding state
+        user.RestoreOnboardingState(
+            entity.OnboardingCompleted,
+            entity.OnboardingSkipped,
+            entity.OnboardingCompletedAt);
 
         return user;
     }

@@ -61,6 +61,11 @@ public class UserEntity
     public DateTime? OnboardingWizardSeenAt { get; set; }
     public DateTime? OnboardingDismissedAt { get; set; }
 
+    // Issue #323: Onboarding completion tracking
+    public bool OnboardingCompleted { get; set; }
+    public bool OnboardingSkipped { get; set; }
+    public DateTime? OnboardingCompletedAt { get; set; }
+
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();

@@ -9748,8 +9748,17 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime?>("LockedUntil")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("OnboardingCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("OnboardingCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("OnboardingDismissedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("OnboardingSkipped")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("OnboardingWizardSeenAt")
                         .HasColumnType("timestamp with time zone");

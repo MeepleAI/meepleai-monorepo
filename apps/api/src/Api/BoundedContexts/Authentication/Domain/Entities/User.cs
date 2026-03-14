@@ -64,6 +64,11 @@ public sealed class User : AggregateRoot<Guid>
     public DateTime? OnboardingWizardSeenAt { get; private set; }
     public DateTime? OnboardingDismissedAt { get; private set; }
 
+    // Issue #323: Onboarding completion tracking
+    public bool OnboardingCompleted { get; private set; }
+    public bool OnboardingSkipped { get; private set; }
+    public DateTime? OnboardingCompletedAt { get; private set; }
+
     // Navigation properties (not part of domain model, for EF Core only)
     private readonly List<Session> _sessions = new();
     private readonly List<ApiKey> _apiKeys = new();
@@ -707,6 +712,28 @@ public sealed class User : AggregateRoot<Guid>
         Bio = bio;
     }
 
+    /// <summary>
+    /// Marks the user's onboarding as completed.
+    /// Issue #323: Onboarding completion tracking.
+    /// </summary>
+    public void CompleteOnboarding()
+    {
+        OnboardingCompleted = true;
+        OnboardingSkipped = false;
+        OnboardingCompletedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Marks the user's onboarding as skipped.
+    /// Issue #323: Onboarding completion tracking.
+    /// </summary>
+    public void SkipOnboarding()
+    {
+        OnboardingCompleted = true;
+        OnboardingSkipped = true;
+        OnboardingCompletedAt = DateTime.UtcNow;
+    }
+
     #endregion
 
     #region Persistence Hydration Methods (internal - S3011 fix)
@@ -845,6 +872,17 @@ public sealed class User : AggregateRoot<Guid>
         EmailVerified = emailVerified;
         EmailVerifiedAt = emailVerifiedAt;
         VerificationGracePeriodEndsAt = verificationGracePeriodEndsAt;
+    }
+
+    /// <summary>
+    /// Restores onboarding state from persistence layer.
+    /// Issue #323: Onboarding completion tracking.
+    /// </summary>
+    internal void RestoreOnboardingState(bool onboardingCompleted, bool onboardingSkipped, DateTime? onboardingCompletedAt)
+    {
+        OnboardingCompleted = onboardingCompleted;
+        OnboardingSkipped = onboardingSkipped;
+        OnboardingCompletedAt = onboardingCompletedAt;
     }
 
     #endregion
