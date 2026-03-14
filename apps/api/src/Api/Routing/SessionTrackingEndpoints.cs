@@ -110,6 +110,12 @@ internal static class SessionTrackingEndpoints
         MapAddSessionEventEndpoint(group);
         MapGetSessionEventsEndpoint(group);
 
+        // Session checkpoint / deep save endpoints (Issue #278)
+        MapCreateCheckpointEndpoint(group);
+        MapGetCheckpointsEndpoint(group);
+        MapGetCheckpointSnapshotEndpoint(group);
+        MapDeleteCheckpointEndpoint(group);
+
         return group;
     }
 
@@ -1944,6 +1950,102 @@ internal static class SessionTrackingEndpoints
         .Produces(404);
     }
 
+    // === Issue #278: Session Checkpoint / Deep Save ===
+
+    private static void MapCreateCheckpointEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/checkpoints", async (
+            Guid sessionId,
+            CreateCheckpointRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+
+            var command = new CreateCheckpointCommand(
+                sessionId,
+                request.Name,
+                request.SnapshotData,
+                request.DiaryEventCount,
+                userId);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/game-sessions/{sessionId}/checkpoints/{result.CheckpointId}", result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("CreateSessionCheckpoint")
+        .WithTags("SessionTracking", "Checkpoints")
+        .WithSummary("Create a session checkpoint (deep save)")
+        .WithDescription("Saves full session state as a named checkpoint for later restore. Issue #278.")
+        .Produces(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    private static void MapGetCheckpointsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/checkpoints", async (
+            Guid sessionId,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetCheckpointsQuery(sessionId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GetSessionCheckpoints")
+        .WithTags("SessionTracking", "Checkpoints")
+        .WithSummary("List all checkpoints for a session")
+        .WithDescription("Returns all saved checkpoints ordered by most recent first. Issue #278.")
+        .Produces<GetCheckpointsResult>(200)
+        .Produces(401);
+    }
+
+    private static void MapGetCheckpointSnapshotEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/checkpoints/{checkpointId:guid}", async (
+            Guid checkpointId,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetCheckpointSnapshotQuery(checkpointId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GetCheckpointSnapshot")
+        .WithTags("SessionTracking", "Checkpoints")
+        .WithSummary("Get checkpoint snapshot data for restore")
+        .WithDescription("Returns the full snapshot data of a checkpoint for client-side restore. Issue #278.")
+        .Produces<GetCheckpointSnapshotResult>(200)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    private static void MapDeleteCheckpointEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/game-sessions/checkpoints/{checkpointId:guid}", async (
+            Guid checkpointId,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            await mediator.Send(new DeleteCheckpointCommand(checkpointId), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .RequireAuthenticatedUser()
+        .WithName("DeleteSessionCheckpoint")
+        .WithTags("SessionTracking", "Checkpoints")
+        .WithSummary("Delete a session checkpoint")
+        .WithDescription("Permanently removes a session checkpoint. Issue #278.")
+        .Produces(204)
+        .Produces(401)
+        .Produces(404);
+    }
+
     internal static RouteGroupBuilder MapSessionStatisticsEndpoints(this RouteGroupBuilder group)
     {
         group.MapGet("/game-sessions/session-statistics", async (
@@ -2026,3 +2128,6 @@ public sealed record SendChatActionRequest(string Content, int? TurnNumber = nul
 
 /// <summary>Request body for adding a session event (Issue #276).</summary>
 public sealed record AddSessionEventRequest(string EventType, string? Payload = null, string? Source = null);
+
+/// <summary>Request body for creating a session checkpoint (Issue #278).</summary>
+public sealed record CreateCheckpointRequest(string Name, string SnapshotData, int DiaryEventCount);
