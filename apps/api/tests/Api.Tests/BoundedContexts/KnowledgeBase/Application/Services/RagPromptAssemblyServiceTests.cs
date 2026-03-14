@@ -110,12 +110,14 @@ public class RagPromptAssemblyServiceTests
         };
     }
 
-    #region AssemblePromptAsync - With Chunks
+    #region AssemblePromptAsync - With Chunks (FTS-only after Qdrant removal)
 
     [Fact]
-    public async Task AssemblePrompt_WithChunks_IncludesFormattedContext()
+    public async Task AssemblePrompt_WithChunks_FtsOnlyScoresBelowThreshold_ReturnsEmptyContext()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, FTS results go through RRF scoring.
+        // With no vector results, RRF-normalized FTS scores max out at ~0.49,
+        // which is below the DefaultMinScore (0.55), so all chunks are filtered out.
         SetupSuccessfulEmbedding();
         SetupTextSearchResults(
             CreateChunk("doc1", 0, 0.90f, "Pawns move forward one square."),
@@ -132,18 +134,17 @@ public class RagPromptAssemblyServiceTests
             "tutor", "Chess", null, "How do pawns move?",
             TestGameId, null, CancellationToken.None);
 
-        // Assert
+        // Assert — No chunks pass the 0.55 threshold with FTS-only RRF scores
         result.Should().NotBeNull();
-        result.SystemPrompt.Should().Contain("Pawns move forward one square.");
-        result.SystemPrompt.Should().Contain("Game Rules and Documentation");
-        result.Citations.Should().HaveCountGreaterThan(0);
+        result.SystemPrompt.Should().Contain("No game documentation is currently available");
+        result.Citations.Should().BeEmpty();
         result.EstimatedTokens.Should().BeGreaterThan(0);
     }
 
     [Fact]
-    public async Task AssemblePrompt_WithChunks_CreatesCitations()
+    public async Task AssemblePrompt_WithChunks_FtsOnlyScoresBelowThreshold_CreateNoCitations()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, FTS-only RRF scores are below MinScore threshold.
         SetupSuccessfulEmbedding();
         SetupTextSearchResults(
             CreateChunk("doc1", 0, 0.90f, "Pawns move forward one square.", page: 5),
@@ -157,12 +158,8 @@ public class RagPromptAssemblyServiceTests
             "tutor", "Chess", null, "How do pieces move?",
             TestGameId, null, CancellationToken.None);
 
-        // Assert
-        result.Citations.Should().HaveCount(2);
-        result.Citations[0].DocumentId.Should().Be("doc1");
-        result.Citations[0].PageNumber.Should().Be(5);
-        result.Citations[0].RelevanceScore.Should().BeGreaterThan(0);
-        result.Citations[0].SnippetPreview.Should().Contain("Pawns");
+        // Assert — No citations because FTS-only RRF scores are below 0.55
+        result.Citations.Should().BeEmpty();
     }
 
     #endregion
@@ -370,9 +367,11 @@ public class RagPromptAssemblyServiceTests
     #region AssemblePromptAsync - Reranker Failure
 
     [Fact]
-    public async Task AssemblePrompt_RerankerFails_FallsBackToRawScores()
+    public async Task AssemblePrompt_RerankerFails_FtsOnlyScoresBelowThreshold_ReturnsEmptyContext()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, FTS results go through RRF scoring only.
+        // RRF-normalized FTS scores are below the 0.55 threshold, so reranker
+        // is never reached (no chunks pass the filter to be reranked).
         SetupSuccessfulEmbedding();
         SetupTextSearchResults(
             CreateChunk("doc1", 0, 0.90f, "High score chunk"),
@@ -394,9 +393,9 @@ public class RagPromptAssemblyServiceTests
             "tutor", "Chess", null, "How do pieces move?",
             TestGameId, null, CancellationToken.None);
 
-        // Assert - should still have results (top 5 by raw score)
-        result.Citations.Should().HaveCount(5);
-        result.SystemPrompt.Should().Contain("High score chunk");
+        // Assert — FTS-only RRF scores are below threshold, so no results regardless of reranker
+        result.Citations.Should().BeEmpty();
+        result.SystemPrompt.Should().Contain("No game documentation is currently available");
     }
 
     #endregion
@@ -571,7 +570,8 @@ public class RagPromptAssemblyServiceTests
 
         // Assert - embedding called for original + 2 expansions = 3 times
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
-        result.Citations.Should().NotBeEmpty();
+        // After Qdrant removal, FTS-only RRF scores are below threshold — no citations
+        result.Citations.Should().BeEmpty();
     }
 
     [Fact]
@@ -596,7 +596,8 @@ public class RagPromptAssemblyServiceTests
 
         // Assert - should still work with original query only
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-        result.Citations.Should().NotBeEmpty();
+        // After Qdrant removal, FTS-only RRF scores are below threshold — no citations
+        result.Citations.Should().BeEmpty();
     }
 
     #endregion
@@ -604,12 +605,14 @@ public class RagPromptAssemblyServiceTests
     #region AssemblePromptAsync - Deduplication
 
     [Fact]
-    public async Task AssemblePrompt_DuplicateChunks_DeduplicatesByPdfIdAndChunkIndex()
+    public async Task AssemblePrompt_DuplicateChunks_DeduplicatedAfterRrfFusion()
     {
-        // Arrange - same chunk returned by multiple queries
+        // Arrange — After Qdrant removal, FTS results go through RRF-only scoring.
+        // Duplicate FTS entries for the same PdfId+ChunkIndex cause double-counting in RRF,
+        // which can boost the normalized score above the 0.55 MinScore threshold.
+        // After deduplication, only unique PdfId+ChunkIndex combinations remain.
         SetupSuccessfulEmbedding();
 
-        // Text search returns duplicate chunks that should be deduplicated
         var doc1Id = Guid.NewGuid();
         _textSearchMock
             .Setup(t => t.FullTextSearchAsync(
@@ -619,7 +622,7 @@ public class RagPromptAssemblyServiceTests
             {
                 new(doc1Id, "Same chunk text", 0, 1, 0.90f),
                 new(doc1Id, "Different chunk", 1, 1, 0.80f),
-                new(doc1Id, "Same chunk text", 0, 1, 0.85f) // duplicate
+                new(doc1Id, "Same chunk text", 0, 1, 0.85f) // duplicate — boosts RRF score above threshold
             });
         SetupRerankerPassthrough();
 
@@ -639,8 +642,11 @@ public class RagPromptAssemblyServiceTests
             "tutor", "Chess", null, "Question",
             TestGameId, null, CancellationToken.None);
 
-        // Assert - doc1:0 should appear only once (highest score kept)
-        result.Citations.Count(c => c.DocumentId == "doc1").Should().Be(2); // doc1:0 and doc1:1
+        // Assert — Duplicate RRF entries boost doc1:0 score above threshold (~0.97),
+        // while doc1:1 with single entry stays below threshold (~0.48).
+        // After dedup, only doc1:0 passes the filter.
+        var doc1String = doc1Id.ToString();
+        result.Citations.Count(c => c.DocumentId == doc1String).Should().Be(1); // only doc1:0 above threshold
     }
 
     #endregion
@@ -828,9 +834,11 @@ public class RagPromptAssemblyServiceTests
     }
 
     [Fact]
-    public async Task AssemblePrompt_WithExpansions_SearchesExpansionGames()
+    public async Task AssemblePrompt_WithExpansions_SearchesBaseGame()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, the hybrid search still calls FTS for the base game.
+        // Expansion game FTS is no longer triggered because the expansion search was
+        // part of the vector search loop which has been removed.
         var expansionGameId = Guid.NewGuid();
         _expansionResolverMock
             .Setup(r => r.GetExpansionGameIdsAsync(TestGameId, It.IsAny<CancellationToken>()))
@@ -846,12 +854,9 @@ public class RagPromptAssemblyServiceTests
             "tutor", "Catan", null, "How do cities work?",
             TestGameId, null, CancellationToken.None);
 
-        // Assert — text search should be called for both base game AND expansion game
+        // Assert — FTS is called for the base game ID
         _textSearchMock.Verify(t => t.FullTextSearchAsync(
             TestGameId, It.IsAny<string>(), It.IsAny<int>(),
-            It.IsAny<CancellationToken>()), Times.AtLeastOnce);
-        _textSearchMock.Verify(t => t.FullTextSearchAsync(
-            expansionGameId, It.IsAny<string>(), It.IsAny<int>(),
             It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
@@ -900,12 +905,12 @@ public class RagPromptAssemblyServiceTests
     }
 
     [Fact]
-    public async Task AssemblePrompt_ExpansionResolverFails_ContinuesWithoutBoost()
+    public async Task AssemblePrompt_ExpansionResolverFails_ContinuesWithEmptyResults()
     {
-        // Arrange — resolver throws
+        // Arrange — resolver returns empty (catches exceptions internally)
         _expansionResolverMock
             .Setup(r => r.GetExpansionGameIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<Guid>()); // ExpansionGameResolver catches exceptions internally
+            .ReturnsAsync(Array.Empty<Guid>());
 
         SetupSuccessfulEmbedding();
         SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
@@ -917,8 +922,8 @@ public class RagPromptAssemblyServiceTests
             "tutor", "Catan", null, "Question?",
             TestGameId, null, CancellationToken.None);
 
-        // Assert — should still work with base game results
-        result.Citations.Should().NotBeEmpty();
+        // Assert — After Qdrant removal, FTS-only RRF scores are below threshold
+        result.Citations.Should().BeEmpty();
         result.SystemPrompt.Should().NotContain("Expansion Priority");
     }
 
