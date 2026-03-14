@@ -35,5 +35,6 @@ internal record UserLibraryEntryDto(
     Guid? PrivateGameId = null,      // Issue #3663: Private game reference
     bool IsPrivateGame = false,      // Issue #3663: Computed flag
     bool CanProposeToCatalog = false, // Issue #3663: Can propose private game to catalog
-    DateTime? OwnershipDeclaredAt = null // Ownership/RAG access: when user declared ownership of this game
+    DateTime? OwnershipDeclaredAt = null, // Ownership/RAG access: when user declared ownership of this game
+    bool HasRagAccess = false             // Ownership/RAG access: computed from admin/public/ownership rules
 );

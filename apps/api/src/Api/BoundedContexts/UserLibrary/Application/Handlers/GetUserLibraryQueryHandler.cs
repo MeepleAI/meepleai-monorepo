@@ -138,6 +138,25 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
         var gameIds = entries.Select(e => e.GameId).Where(id => id != Guid.Empty).ToList();
         var sharedGames = await _sharedGameRepository.GetByIdsAsync(gameIds, cancellationToken).ConfigureAwait(false);
 
+        // Ownership/RAG access: batch-load IsRagPublic flags and user role to avoid N+1.
+        // Compute HasRagAccess in-memory: isAdmin || isRagPublic || ownershipDeclaredAt != null.
+        var ragPublicFlags = await _dbContext.SharedGames
+            .AsNoTracking()
+            .Where(sg => gameIds.Contains(sg.Id) && !sg.IsDeleted)
+            .Select(sg => new { sg.Id, sg.IsRagPublic })
+            .ToDictionaryAsync(sg => sg.Id, sg => sg.IsRagPublic, cancellationToken)
+            .ConfigureAwait(false);
+
+        var userRoleStr = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == query.UserId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var isAdmin = string.Equals(userRoleStr, "admin", StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(userRoleStr, "superadmin", StringComparison.OrdinalIgnoreCase);
+
         // Build DTOs from batch-loaded data
         var entryDtos = new List<UserLibraryEntryDto>();
         foreach (var entry in entries)
@@ -172,7 +191,10 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     PlayingTimeMinutes: sharedGame.PlayingTimeMinutes,
                     ComplexityRating: sharedGame.ComplexityRating,
                     AverageRating: sharedGame.AverageRating,
-                    OwnershipDeclaredAt: entry.OwnershipDeclaredAt
+                    OwnershipDeclaredAt: entry.OwnershipDeclaredAt,
+                    HasRagAccess: isAdmin
+                        || (ragPublicFlags.TryGetValue(entry.GameId, out var isPublic) && isPublic)
+                        || entry.OwnershipDeclaredAt != null
                 ));
             }
             // Check PrivateGame entries (batch-loaded above)
@@ -203,7 +225,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     KbIndexedCount: privateKbStats?.KbIndexedCount ?? 0,
                     KbProcessingCount: privateKbStats?.KbProcessingCount ?? 0,
                     AgentIsOwned: true, // Always true in library context
-                    OwnershipDeclaredAt: entry.OwnershipDeclaredAt
+                    OwnershipDeclaredAt: entry.OwnershipDeclaredAt,
+                    HasRagAccess: isAdmin || entry.OwnershipDeclaredAt != null
                 ));
             }
         }
