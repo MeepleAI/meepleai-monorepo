@@ -22,6 +22,12 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     private const int MaxTeams = 10;
     private const int MaxTurns = 9999;
 
+    /// <summary>
+    /// Default phase template for games without custom phase definitions.
+    /// Issue #273: Phase/Round Tracker Tool.
+    /// </summary>
+    public static readonly string[] DefaultPhaseNames = ["Setup", "Play", "Scoring", "End"];
+
     private readonly List<LiveSessionPlayer> _players = new();
     private readonly List<LiveSessionTeam> _teams = new();
     private readonly List<Guid> _turnOrder = new();
@@ -552,6 +558,31 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Jumps to a specific phase by index. Fires a phase advanced event.
+    /// Issue #273: Phase/Round Tracker Tool — supports non-sequential phase navigation.
+    /// </summary>
+    public void SetPhaseIndex(int phaseIndex, TimeProvider? timeProvider = null)
+    {
+        if (Status != LiveSessionStatus.InProgress)
+            throw new ConflictException($"Cannot set phase in {Status} status. Must be InProgress.");
+
+        if (PhaseNames.Length == 0)
+            throw new DomainException("No phases configured for this session.");
+
+        if (phaseIndex < 0 || phaseIndex >= PhaseNames.Length)
+            throw new ValidationException($"Phase index must be between 0 and {PhaseNames.Length - 1}.");
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        CurrentPhaseIndex = phaseIndex;
+        UpdatedAt = now;
+
+        AddDomainEvent(new LiveSessionPhaseAdvancedEvent(
+            Id, CurrentTurnIndex, CurrentPhaseIndex,
+            PhaseNames[CurrentPhaseIndex],
+            PhaseNames.Length));
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
+using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -137,5 +138,80 @@ internal class TriggerEventSnapshotCommandHandler
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 
         return result;
+    }
+}
+
+/// <summary>
+/// Applies the default phase template (Setup → Play → Scoring → End) to a live session.
+/// Issue #273: Phase/Round Tracker Tool.
+/// </summary>
+internal class ApplyDefaultPhasesCommandHandler : ICommandHandler<ApplyDefaultPhasesCommand>
+{
+    private readonly ILiveSessionRepository _sessionRepository;
+    private readonly TimeProvider _timeProvider;
+
+    public ApplyDefaultPhasesCommandHandler(
+        ILiveSessionRepository sessionRepository,
+        TimeProvider timeProvider)
+    {
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+    }
+
+    public async Task Handle(ApplyDefaultPhasesCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
+
+        session.ConfigurePhases(LiveGameSession.DefaultPhaseNames, _timeProvider);
+        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+    }
+}
+
+/// <summary>
+/// Handles jumping to a specific phase by index in a live session.
+/// Issue #273: Phase/Round Tracker Tool — non-sequential phase navigation.
+/// </summary>
+internal class SetPhaseIndexCommandHandler : ICommandHandler<SetPhaseIndexCommand>
+{
+    private readonly ILiveSessionRepository _sessionRepository;
+    private readonly TimeProvider _timeProvider;
+    private readonly IMediator _mediator;
+
+    public SetPhaseIndexCommandHandler(
+        ILiveSessionRepository sessionRepository,
+        TimeProvider timeProvider,
+        IMediator mediator)
+    {
+        _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+    }
+
+    public async Task Handle(SetPhaseIndexCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
+
+        session.SetPhaseIndex(command.PhaseIndex, _timeProvider);
+        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+
+        // Auto-trigger snapshot on phase change if configured
+        var triggerConfig = session.SnapshotTriggerConfig;
+        if (triggerConfig != null && triggerConfig.IsTriggerEnabled(
+                Domain.Entities.SessionSnapshot.SnapshotTrigger.PhaseAdvanced))
+        {
+            await _mediator.Send(new TriggerEventSnapshotCommand(
+                command.SessionId,
+                Domain.Entities.SessionSnapshot.SnapshotTrigger.PhaseAdvanced,
+                $"Phase set to {session.GetCurrentPhaseName() ?? $"phase {session.CurrentPhaseIndex}"}",
+                null), cancellationToken).ConfigureAwait(false);
+        }
     }
 }

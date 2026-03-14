@@ -160,6 +160,25 @@ internal static class LiveSessionEndpoints
             .WithSummary("Configure turn phases")
             .WithDescription("Sets the phase names for the session's turn structure. Issue #4761.");
 
+        group.MapPost("/live-sessions/{sessionId}/phases/default", HandleApplyDefaultPhases)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("LiveSessions")
+            .WithSummary("Apply default phase template")
+            .WithDescription("Applies the default phase template (Setup → Play → Scoring → End). Issue #273.");
+
+        group.MapPut("/live-sessions/{sessionId}/phases/{phaseIndex:int}", HandleSetPhaseIndex)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("LiveSessions")
+            .WithSummary("Jump to a specific phase")
+            .WithDescription("Sets the current phase to the specified index. Issue #273.");
+
         group.MapPost("/live-sessions/{sessionId}/trigger-snapshot", HandleTriggerSnapshot)
             .RequireAuthenticatedUser()
             .Produces<SessionSnapshotDto>(201)
@@ -464,6 +483,25 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(new ConfigureLiveSessionPhasesCommand(sessionId, request.PhaseNames), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleApplyDefaultPhases(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new ApplyDefaultPhasesCommand(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleSetPhaseIndex(
+        Guid sessionId,
+        int phaseIndex,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new SetPhaseIndexCommand(sessionId, phaseIndex), cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 
