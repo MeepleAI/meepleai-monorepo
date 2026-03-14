@@ -46,6 +46,8 @@ export const UserLibraryEntrySchema = z.object({
   kbCardCount: z.number().int().nonnegative().default(0), // total PDF documents linked
   kbIndexedCount: z.number().int().nonnegative().default(0), // PDFs with ProcessingState.Ready
   kbProcessingCount: z.number().int().nonnegative().default(0), // PDFs currently in pipeline
+  ownershipDeclaredAt: z.string().datetime().nullable().optional(), // when user declared ownership
+  hasRagAccess: z.boolean().default(false), // whether user has RAG access for this game
   agentIsOwned: z.boolean().default(true), // always true in library context
   minPlayers: z.number().int().nullable().optional(),
   maxPlayers: z.number().int().nullable().optional(),
