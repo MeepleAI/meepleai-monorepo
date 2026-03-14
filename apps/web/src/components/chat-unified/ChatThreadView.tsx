@@ -23,6 +23,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
 import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
+import type { UserTier } from '@/hooks/useVoiceInput';
 import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -38,9 +39,9 @@ import { ResponseMetaBadge } from './ResponseMetaBadge';
 import { RuleSourceCard } from './RuleSourceCard';
 import { TechnicalDetailsPanel } from './TechnicalDetailsPanel';
 import { TtsSpeakerButton } from './TtsSpeakerButton';
-import { VoiceMicButton } from './VoiceMicButton';
 import { VoiceSettingsPopover } from './VoiceSettingsPopover';
 import { VoiceTranscriptOverlay } from './VoiceTranscriptOverlay';
+import { VoiceChatButton } from '../chat/VoiceChatButton';
 
 // ============================================================================
 // Types
@@ -102,6 +103,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const lastMessageWasVoiceRef = useRef(false);
   const handleSendRef = useRef<((content?: string) => void) | undefined>(undefined);
 
+  // Derive tier from user role for voice provider selection
+  const voiceTier: UserTier = isAdmin ? 'admin' : isEditor ? 'premium' : 'free';
+
   const {
     state: voiceState,
     interimText,
@@ -110,9 +114,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     stopListening,
     cancelListening,
     isSupported: isVoiceSupported,
+    providerName: voiceProviderName,
   } = useVoiceInput({
     language: voicePrefs.language,
     autoSend: voicePrefs.autoSend,
+    tier: voiceTier,
     onTranscript: text => {
       if (voicePrefs.autoSend && text.trim()) {
         lastMessageWasVoiceRef.current = true;
@@ -738,10 +744,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 disabled={isSending || streamState.isStreaming}
                 data-testid="message-input"
               />
-              <VoiceMicButton
+              <VoiceChatButton
                 state={voiceState}
                 onTap={handleVoiceTap}
                 disabled={!isVoiceSupported || isSending || streamState.isStreaming}
+                providerName={voiceProviderName}
                 size="md"
               />
               {isVoiceSupported && (

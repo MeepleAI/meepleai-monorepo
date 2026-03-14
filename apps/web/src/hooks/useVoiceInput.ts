@@ -19,7 +19,7 @@
  * ```
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { createSpeechRecognitionProvider } from '@/lib/voice/providers/provider-factory';
 import type {
@@ -36,6 +36,8 @@ import { isSpeechRecognitionSupported } from '@/lib/voice/utils/voice-detection'
 // Types
 // ============================================================================
 
+export type UserTier = 'free' | 'premium' | 'admin';
+
 export interface UseVoiceInputOptions {
   /** BCP 47 language tag (default: from DEFAULT_VOICE_CONFIG) */
   language?: string;
@@ -43,6 +45,8 @@ export interface UseVoiceInputOptions {
   autoSend?: boolean;
   /** Silence timeout in ms before auto-stopping (default: from DEFAULT_VOICE_CONFIG) */
   silenceTimeoutMs?: number;
+  /** User subscription tier for provider selection (default: 'free') */
+  tier?: UserTier;
   /** Called when a final transcript is produced */
   onTranscript?: (text: string, confidence: number) => void;
   /** Called when an error occurs */
@@ -68,6 +72,8 @@ export interface UseVoiceInputReturn {
   error: VoiceError | null;
   /** Clear the current error */
   clearError: () => void;
+  /** Name of the active STT provider ('whisper' | 'web-speech') */
+  providerName: 'whisper' | 'web-speech';
 }
 
 // ============================================================================
@@ -84,6 +90,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
   const {
     language = DEFAULT_VOICE_CONFIG.language,
     silenceTimeoutMs = DEFAULT_VOICE_CONFIG.silenceTimeoutMs,
+    tier = 'free',
     onTranscript,
     onError,
   } = options;
@@ -107,6 +114,17 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
   // Browser support check (SSR-safe, computed once)
   const [isSupported] = useState(() => isSpeechRecognitionSupported());
+
+  // Determine provider name based on tier + support
+  const providerName: 'whisper' | 'web-speech' = useMemo(() => {
+    if (tier === 'premium' || tier === 'admin') {
+      // Check if MediaRecorder is available for WhisperProvider
+      if (typeof window !== 'undefined' && typeof MediaRecorder !== 'undefined') {
+        return 'whisper';
+      }
+    }
+    return 'web-speech';
+  }, [tier]);
 
   // ------------------------------------------------------------------
   // Error helpers
@@ -143,6 +161,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
   const getOrCreateProvider = useCallback((): ISpeechRecognitionProvider => {
     if (providerRef.current === null) {
+      // TODO: Pass tier to createSpeechRecognitionProvider once #328 merges
       providerRef.current = createSpeechRecognitionProvider();
     }
     return providerRef.current;
@@ -243,5 +262,6 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     isSupported,
     error,
     clearError,
+    providerName,
   };
 }
