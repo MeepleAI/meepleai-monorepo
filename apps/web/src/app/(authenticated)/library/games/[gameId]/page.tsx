@@ -11,9 +11,11 @@
 
 import { useState, useEffect } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
+import { DeclareOwnershipButton } from '@/components/library/DeclareOwnershipButton';
 import { EditNotesModal } from '@/components/library/EditNotesModal';
 import {
   GameDetailHeroCard,
@@ -22,11 +24,12 @@ import {
   GameDetailKbTab,
   GameDetailSessionsTab,
 } from '@/components/library/game-detail';
+import { RagAccessBadge } from '@/components/library/RagAccessBadge';
 import { RemoveGameDialog } from '@/components/library/RemoveGameDialog';
 import { RelatedEntitiesSection } from '@/components/ui/data-display/entity-link/related-entities-section';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
-import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
+import { useLibraryGameDetail, libraryKeys } from '@/hooks/queries/useLibrary';
 
 import { GameDetailNavConfig } from './GameDetailNavConfig';
 import LibraryGameDetailLoading from './loading';
@@ -38,7 +41,17 @@ export default function LibraryGameDetailPage() {
   const gameId = params?.gameId as string;
   const tab = searchParams.get('tab');
 
+  const queryClient = useQueryClient();
   const { data: gameDetail, isLoading, error } = useLibraryGameDetail(gameId);
+
+  // Derive RAG access from ownership state (Owned/InPrestito = access granted via migration backfill)
+  const hasRagAccess =
+    gameDetail?.currentState === 'Owned' || gameDetail?.currentState === 'InPrestito';
+
+  const handleOwnershipDeclared = () => {
+    queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
+    queryClient.invalidateQueries({ queryKey: libraryKeys.gameDetail(gameId) });
+  };
 
   // Event-driven modal state (from ActionBar CustomEvents)
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
@@ -104,6 +117,19 @@ export default function LibraryGameDetailPage() {
       <div style={{ viewTransitionName: `meeple-card-${gameId}` }}>
         <GameDetailHeroCard gameDetail={gameDetail} />
       </div>
+
+      {/* Ownership + RAG Access indicators */}
+      {(gameDetail.currentState === 'Nuovo' || hasRagAccess) && (
+        <div className="mx-auto max-w-6xl px-4 pt-3 flex items-center gap-3">
+          <DeclareOwnershipButton
+            gameId={gameId}
+            gameName={gameDetail.gameTitle}
+            gameState={gameDetail.currentState}
+            onOwnershipDeclared={handleOwnershipDeclared}
+          />
+          <RagAccessBadge hasRagAccess={hasRagAccess} isRagPublic={false} />
+        </div>
+      )}
 
       <div className="mx-auto max-w-6xl px-4 py-4">
         {tab === 'agent' ? (
