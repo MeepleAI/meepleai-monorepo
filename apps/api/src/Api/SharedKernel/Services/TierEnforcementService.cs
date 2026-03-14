@@ -188,7 +188,7 @@ internal sealed class TierEnforcementService : ITierEnforcementService
 
     private static string GetDateBucket(TierAction action) => action switch
     {
-        TierAction.AgentQuery or TierAction.SessionAgentQuery
+        TierAction.AgentQuery or TierAction.SessionAgentQuery or TierAction.SpeechTranscription
             => DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 
         TierAction.UploadPdf
@@ -214,7 +214,7 @@ internal sealed class TierEnforcementService : ITierEnforcementService
 
     private static TimeSpan GetTtlForAction(TierAction action) => action switch
     {
-        TierAction.AgentQuery or TierAction.SessionAgentQuery or TierAction.UploadSessionPhoto
+        TierAction.AgentQuery or TierAction.SessionAgentQuery or TierAction.UploadSessionPhoto or TierAction.SpeechTranscription
             => DailyTtl,
 
         TierAction.UploadPdf
@@ -235,6 +235,7 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         TierAction.SessionAgentQuery => limits.MaxSessionQueries,
         TierAction.UploadSessionPhoto => limits.MaxPhotosPerSession,
         TierAction.ProposeToSharedCatalog => limits.MaxCatalogProposalsPerWeek,
+        TierAction.SpeechTranscription => limits.MaxSpeechTranscriptionsPerDay,
         _ => int.MaxValue
     };
 }

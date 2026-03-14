@@ -115,6 +115,9 @@ internal static class KnowledgeBaseServiceExtensions
         // ISSUE-3491: Context Assembler (orchestrates multi-source context assembly)
         services.AddScoped<ContextAssembler>();
 
+        // Issue #327: Speech-to-text transcription via Whisper API
+        services.AddHttpClient<ITranscriptionService, WhisperTranscriptionService>();
+
         // ISSUE-3760: Arbitro Agent Service (AI-powered move validation)
         services.AddScoped<IArbitroAgentService, ArbitroAgentService>();
 

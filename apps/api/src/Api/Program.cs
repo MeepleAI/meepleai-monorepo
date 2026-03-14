@@ -524,6 +524,7 @@ v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
+v1Api.MapSpeechEndpoints(); // Issue #327: Speech-to-text transcription
 v1Api.MapPdfEndpoints();
 v1Api.MapDocumentCollectionEndpoints();
 v1Api.MapRuleSpecEndpoints();

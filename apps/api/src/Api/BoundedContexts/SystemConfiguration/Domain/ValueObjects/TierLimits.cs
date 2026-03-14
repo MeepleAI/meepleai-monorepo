@@ -16,6 +16,8 @@ public record TierLimits
     public int MaxPhotosPerSession { get; init; }
     public bool SessionSaveEnabled { get; init; }
     public int MaxCatalogProposalsPerWeek { get; init; }
+    /// <summary>Issue #327: Maximum speech transcriptions per day (0 = blocked).</summary>
+    public int MaxSpeechTranscriptionsPerDay { get; init; }
 
     private TierLimits() { }
 
@@ -24,7 +26,8 @@ public record TierLimits
         long maxPdfSizeBytes, int maxAgents,
         int maxAgentQueriesPerDay, int maxSessionQueries,
         int maxSessionPlayers, int maxPhotosPerSession,
-        bool sessionSaveEnabled, int maxCatalogProposalsPerWeek)
+        bool sessionSaveEnabled, int maxCatalogProposalsPerWeek,
+        int maxSpeechTranscriptionsPerDay = 0)
     {
         if (maxPrivateGames < 0)
             throw new ArgumentException("Cannot be negative", nameof(maxPrivateGames));
@@ -44,6 +47,8 @@ public record TierLimits
             throw new ArgumentException("Cannot be negative", nameof(maxPhotosPerSession));
         if (maxCatalogProposalsPerWeek < 0)
             throw new ArgumentException("Cannot be negative", nameof(maxCatalogProposalsPerWeek));
+        if (maxSpeechTranscriptionsPerDay < 0)
+            throw new ArgumentException("Cannot be negative", nameof(maxSpeechTranscriptionsPerDay));
 
         return new TierLimits
         {
@@ -56,7 +61,8 @@ public record TierLimits
             MaxSessionPlayers = maxSessionPlayers,
             MaxPhotosPerSession = maxPhotosPerSession,
             SessionSaveEnabled = sessionSaveEnabled,
-            MaxCatalogProposalsPerWeek = maxCatalogProposalsPerWeek
+            MaxCatalogProposalsPerWeek = maxCatalogProposalsPerWeek,
+            MaxSpeechTranscriptionsPerDay = maxSpeechTranscriptionsPerDay
         };
     }
 
@@ -64,13 +70,16 @@ public record TierLimits
     public static TierLimits Unlimited => Create(
         int.MaxValue, int.MaxValue, 500L * 1024 * 1024,
         int.MaxValue, int.MaxValue, int.MaxValue,
-        12, int.MaxValue, true, int.MaxValue);
+        12, int.MaxValue, true, int.MaxValue,
+        maxSpeechTranscriptionsPerDay: int.MaxValue);
 
-    /// <summary>Free tier defaults.</summary>
+    /// <summary>Free tier defaults (speech transcription blocked: 0).</summary>
     public static TierLimits FreeTier => Create(
-        3, 3, 50L * 1024 * 1024, 1, 20, 30, 6, 5, false, 1);
+        3, 3, 50L * 1024 * 1024, 1, 20, 30, 6, 5, false, 1,
+        maxSpeechTranscriptionsPerDay: 0);
 
     /// <summary>Premium tier defaults.</summary>
     public static TierLimits PremiumTier => Create(
-        15, 15, 200L * 1024 * 1024, 10, 200, 150, 12, 20, true, 5);
+        15, 15, 200L * 1024 * 1024, 10, 200, 150, 12, 20, true, 5,
+        maxSpeechTranscriptionsPerDay: 60);
 }

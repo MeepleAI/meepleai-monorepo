@@ -33,7 +33,8 @@ public enum TierAction
     SessionAgentQuery,
     UploadSessionPhoto,
     SaveSession,
-    ProposeToSharedCatalog
+    ProposeToSharedCatalog,
+    SpeechTranscription
 }
 
 /// <summary>
