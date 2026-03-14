@@ -171,7 +171,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     MaxPlayers: sharedGame.MaxPlayers,
                     PlayingTimeMinutes: sharedGame.PlayingTimeMinutes,
                     ComplexityRating: sharedGame.ComplexityRating,
-                    AverageRating: sharedGame.AverageRating
+                    AverageRating: sharedGame.AverageRating,
+                    OwnershipDeclaredAt: entry.OwnershipDeclaredAt
                 ));
             }
             // Check PrivateGame entries (batch-loaded above)
@@ -201,7 +202,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     KbCardCount: privateKbStats?.KbCardCount ?? 0,
                     KbIndexedCount: privateKbStats?.KbIndexedCount ?? 0,
                     KbProcessingCount: privateKbStats?.KbProcessingCount ?? 0,
-                    AgentIsOwned: true // Always true in library context
+                    AgentIsOwned: true, // Always true in library context
+                    OwnershipDeclaredAt: entry.OwnershipDeclaredAt
                 ));
             }
         }
