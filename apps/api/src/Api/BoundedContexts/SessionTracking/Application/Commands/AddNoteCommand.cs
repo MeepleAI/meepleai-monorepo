@@ -8,7 +8,8 @@ public record AddNoteCommand(
     string NoteType, // 'Private' | 'Shared' | 'Template'
     string? TemplateKey,
     string Content,
-    bool IsHidden
+    bool IsHidden,
+    string? Source = null // "text" (default) or "voice" — Issue #274
 ) : IRequest<AddNoteResult>;
 
 public record AddNoteResult(

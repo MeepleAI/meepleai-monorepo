@@ -50,7 +50,8 @@ public class AddNoteCommandHandler : IRequestHandler<AddNoteCommand, AddNoteResu
             noteType,
             request.Content,
             request.TemplateKey,
-            request.IsHidden
+            request.IsHidden,
+            request.Source
         );
 
         // Map to persistence entity and save directly
@@ -63,6 +64,7 @@ public class AddNoteCommandHandler : IRequestHandler<AddNoteCommand, AddNoteResu
             Content = note.Content,
             TemplateKey = note.TemplateKey,
             IsHidden = note.IsHidden,
+            Source = note.Source,
             CreatedAt = note.CreatedAt,
             UpdatedAt = null
         };

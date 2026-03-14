@@ -44,6 +44,13 @@ public class PlayerNote
     public bool IsHidden { get; private set; }
 
     /// <summary>
+    /// Provenance tracking: "text" (default) or "voice".
+    /// Issue #274: Voice → Session Notes Integration.
+    /// </summary>
+    [MaxLength(20)]
+    public string Source { get; private set; } = "text";
+
+    /// <summary>
     /// When the note was created.
     /// </summary>
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
@@ -69,6 +76,7 @@ public class PlayerNote
     /// <param name="content">Note content.</param>
     /// <param name="templateKey">Optional template key for template notes.</param>
     /// <param name="isHidden">Whether note is hidden.</param>
+    /// <param name="source">Provenance: "text" (default) or "voice".</param>
     /// <returns>New player note instance.</returns>
     public static PlayerNote Create(
         Guid sessionId,
@@ -76,7 +84,8 @@ public class PlayerNote
         NoteType noteType,
         string content,
         string? templateKey = null,
-        bool isHidden = false)
+        bool isHidden = false,
+        string? source = null)
     {
         if (sessionId == Guid.Empty)
             throw new ArgumentException("Session ID cannot be empty.", nameof(sessionId));
@@ -105,6 +114,7 @@ public class PlayerNote
             Content = content.Trim(),
             TemplateKey = !string.IsNullOrWhiteSpace(templateKey) ? templateKey.Trim() : null,
             IsHidden = isHidden,
+            Source = source ?? "text",
             CreatedAt = DateTime.UtcNow
         };
     }

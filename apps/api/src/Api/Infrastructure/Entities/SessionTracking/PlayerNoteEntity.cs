@@ -20,6 +20,14 @@ public class PlayerNoteEntity
 
     public string Content { get; set; } = string.Empty;
     public bool IsHidden { get; set; }
+
+    /// <summary>
+    /// Provenance tracking: "text" (default) or "voice".
+    /// Issue #274: Voice → Session Notes Integration.
+    /// </summary>
+    [MaxLength(20)]
+    public string Source { get; set; } = "text";
+
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 

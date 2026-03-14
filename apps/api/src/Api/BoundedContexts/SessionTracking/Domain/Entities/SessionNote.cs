@@ -18,6 +18,13 @@ public class SessionNote
     public string EncryptedContent { get; private set; } = string.Empty;
     public bool IsRevealed { get; private set; }
     public string? ObscuredText { get; private set; }
+
+    /// <summary>
+    /// Provenance tracking: how the note was created.
+    /// Issue #274: Voice → Session Notes Integration.
+    /// </summary>
+    public string Source { get; private set; } = "text";
+
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public bool IsDeleted { get; private set; }
@@ -32,12 +39,14 @@ public class SessionNote
     /// <param name="participantId">The participant who owns the note.</param>
     /// <param name="content">The note content (will be encrypted).</param>
     /// <param name="obscuredText">Optional text to show when obscured.</param>
+    /// <param name="source">Provenance: "text" (default) or "voice".</param>
     /// <returns>A new SessionNote instance.</returns>
     public static SessionNote Create(
         Guid sessionId,
         Guid participantId,
         string content,
-        string? obscuredText = null)
+        string? obscuredText = null,
+        string? source = null)
     {
         if (sessionId == Guid.Empty)
         {
@@ -63,6 +72,7 @@ public class SessionNote
             EncryptedContent = Encrypt(content),
             IsRevealed = false,
             ObscuredText = obscuredText,
+            Source = source ?? "text",
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -78,6 +88,7 @@ public class SessionNote
         string encryptedContent,
         bool isRevealed,
         string? obscuredText,
+        string source,
         DateTime createdAt,
         DateTime updatedAt,
         bool isDeleted,
@@ -91,6 +102,7 @@ public class SessionNote
             EncryptedContent = encryptedContent,
             IsRevealed = isRevealed,
             ObscuredText = obscuredText,
+            Source = source,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
             IsDeleted = isDeleted,
