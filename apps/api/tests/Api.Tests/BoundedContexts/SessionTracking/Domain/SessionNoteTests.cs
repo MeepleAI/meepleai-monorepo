@@ -292,6 +292,7 @@ public class SessionNoteTests
             encryptedContent,
             isRevealed: true,
             obscuredText: "hint",
+            source: "text",
             createdAt,
             updatedAt,
             isDeleted: false,
