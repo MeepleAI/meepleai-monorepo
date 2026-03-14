@@ -2,11 +2,14 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Serialization;
 using Api.Middleware;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using KbAgentDto = Api.BoundedContexts.KnowledgeBase.Application.DTOs.AgentDto;
@@ -57,6 +60,9 @@ internal static class AgentEndpoints
 
         // Issue #5585: Arbiter Mode — dispute arbitration
         MapAskArbiterEndpoint(group);
+
+        // Ownership/RAG access: Quick agent creation
+        MapQuickCreateAgentEndpoint(group);
 
         return group;
     }
@@ -257,11 +263,25 @@ internal static class AgentEndpoints
             InvokeAgentRequest req,
             HttpContext context,
             IMediator mediator,
+            IRagAccessService ragAccessService,
+            IAgentRepository agentRepository,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            // RAG access enforcement: resolve game from agent or request, then check
+            var gameId = req.GameId;
+            if (gameId.HasValue)
+            {
+                var userRole = Enum.TryParse<UserRole>(session.User!.Role, ignoreCase: true, out var parsedRole)
+                    ? parsedRole : UserRole.User;
+                var canAccess = await ragAccessService.CanAccessRagAsync(
+                    session.User!.Id, gameId.Value, userRole, ct).ConfigureAwait(false);
+                if (!canAccess)
+                    throw new ForbiddenException("Accesso RAG non autorizzato");
+            }
 
             var command = new InvokeAgentCommand(
                 AgentId: id,
@@ -374,10 +394,27 @@ internal static class AgentEndpoints
     {
         group.MapPost("/agents/chat/ask", async (
             AskAgentQuestionRequest req,
+            HttpContext context,
             IMediator mediator,
+            IRagAccessService ragAccessService,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
+            // RAG access enforcement: check game access if GameId provided
+            if (req.GameId.HasValue)
+            {
+                var (authenticated, session, _) = context.TryGetActiveSession();
+                if (authenticated && session?.User != null)
+                {
+                    var userRole = Enum.TryParse<UserRole>(session.User.Role, ignoreCase: true, out var parsedRole)
+                        ? parsedRole : UserRole.User;
+                    var canAccess = await ragAccessService.CanAccessRagAsync(
+                        session.User.Id, req.GameId.Value, userRole, ct).ConfigureAwait(false);
+                    if (!canAccess)
+                        throw new ForbiddenException("Accesso RAG non autorizzato");
+                }
+            }
+
             var command = new AskAgentQuestionCommand
             {
                 Question = req.Question,
@@ -412,11 +449,20 @@ internal static class AgentEndpoints
             TutorQueryRequest req,
             HttpContext context,
             IMediator mediator,
+            IRagAccessService ragAccessService,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
             // Session validated by RequireSessionFilter
-            _ = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            // RAG access enforcement
+            var userRole = Enum.TryParse<UserRole>(session.User!.Role, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await ragAccessService.CanAccessRagAsync(
+                session.User!.Id, req.GameId, userRole, ct).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
 
             var command = new TutorQueryCommand(
                 GameId: req.GameId,
@@ -479,11 +525,25 @@ internal static class AgentEndpoints
             [FromRoute] Guid id,
             [FromBody] ChatWithAgentRequest request,
             [FromServices] IMediator mediator,
+            [FromServices] IRagAccessService ragAccessService,
+            [FromServices] IAgentRepository agentRepository,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+
+            // RAG access enforcement: resolve agent's game, then check access
+            var agent = await agentRepository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
+            if (agent?.GameId is not null && agent.GameId != Guid.Empty)
+            {
+                var userRole = Enum.TryParse<UserRole>(session.User!.Role, ignoreCase: true, out var parsedRole)
+                    ? parsedRole : UserRole.User;
+                var canAccess = await ragAccessService.CanAccessRagAsync(
+                    session.User!.Id, agent.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+                if (!canAccess)
+                    throw new ForbiddenException("Accesso RAG non autorizzato");
+            }
 
             var command = new SendAgentMessageCommand(
                 AgentId: id,
@@ -527,6 +587,7 @@ internal static class AgentEndpoints
         group.MapPost("/agents/query", async (
             [FromBody] UnifiedAgentQueryRequest request,
             [FromServices] IMediator mediator,
+            [FromServices] IRagAccessService ragAccessService,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
@@ -539,6 +600,17 @@ internal static class AgentEndpoints
 
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+
+            // RAG access enforcement: check game access if GameId provided
+            if (request.GameId.HasValue)
+            {
+                var userRole = Enum.TryParse<UserRole>(session.User!.Role, ignoreCase: true, out var parsedRole)
+                    ? parsedRole : UserRole.User;
+                var canAccess = await ragAccessService.CanAccessRagAsync(
+                    session.User!.Id, request.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+                if (!canAccess)
+                    throw new ForbiddenException("Accesso RAG non autorizzato");
+            }
 
             var command = new UnifiedAgentQueryCommand(
                 Query: request.Query,
@@ -875,11 +947,25 @@ internal static class AgentEndpoints
             [FromRoute] Guid id,
             [FromBody] AskArbiterRequest request,
             [FromServices] IMediator mediator,
+            [FromServices] IRagAccessService ragAccessService,
+            [FromServices] IAgentRepository agentRepository,
             HttpContext httpContext,
             ILogger<Program> logger,
             CancellationToken cancellationToken) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+
+            // RAG access enforcement: resolve agent's game, then check access
+            var agent = await agentRepository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
+            if (agent?.GameId is not null && agent.GameId != Guid.Empty)
+            {
+                var userRole = Enum.TryParse<UserRole>(session.User!.Role, ignoreCase: true, out var parsedRole)
+                    ? parsedRole : UserRole.User;
+                var canAccess = await ragAccessService.CanAccessRagAsync(
+                    session.User!.Id, agent.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+                if (!canAccess)
+                    throw new ForbiddenException("Accesso RAG non autorizzato");
+            }
 
             var command = new AskArbiterCommand
             {
@@ -958,6 +1044,52 @@ internal static class AgentEndpoints
         .Produces(401)
         .Produces(403)
         .Produces(404);
+    }
+
+    /// <summary>
+    /// Quick-create an agent + chat thread for a game after ownership is declared.
+    /// Automatically selects all indexed KB cards.
+    /// </summary>
+    private static void MapQuickCreateAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/quick-create", async (
+            QuickCreateAgentRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new QuickCreateAgentCommand(
+                UserId: session.User!.Id,
+                GameId: req.GameId,
+                SharedGameId: req.SharedGameId,
+                UserRole: session.User.Role,
+                UserTier: session.User.Tier
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} quick-created agent {AgentId} for game {GameId}",
+                session.User.Id, result.AgentId, req.GameId);
+
+            return Results.Created($"/api/v1/agents/{result.AgentId}", result);
+        })
+        .RequireSession()
+        .RequireRateLimiting("AgentCreation")
+        .WithName("QuickCreateAgent")
+        .WithTags("Agents", "User", "Ownership")
+        .WithSummary("Quick-create agent for an owned game")
+        .WithDescription(
+            "Creates a Tutor agent with all indexed KB cards + an initial chat thread. " +
+            "Requires RAG access (ownership declared or game is RAG-public).")
+        .Produces<QuickCreateAgentResult>(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(429);
     }
 }
 
@@ -1109,4 +1241,12 @@ internal record AskArbiterRequest(
     string Situation,
     string PositionA,
     string PositionB
+);
+
+/// <summary>
+/// Request for quick agent creation after ownership declaration.
+/// </summary>
+internal record QuickCreateAgentRequest(
+    Guid GameId,
+    Guid? SharedGameId = null
 );
