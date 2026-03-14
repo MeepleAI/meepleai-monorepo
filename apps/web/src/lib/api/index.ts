@@ -61,6 +61,7 @@ import {
   createWishlistClient,
   createPlayRecordsClient,
   createFeatureFlagsClient,
+  createSandboxClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -102,6 +103,7 @@ import {
   type WishlistClient,
   type PlayRecordsClient,
   type FeatureFlagsClient,
+  type SandboxClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -312,6 +314,9 @@ export interface ApiClient {
   /** User Feature Flags — server-driven feature access */
   featureFlags: FeatureFlagsClient;
 
+  /** RAG Sandbox Dashboard (Admin) */
+  sandbox: SandboxClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -403,6 +408,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     wishlist: createWishlistClient({ httpClient }), // Wishlist
     playRecords: createPlayRecordsClient({ httpClient }), // Play Records
     featureFlags: createFeatureFlagsClient({ httpClient }), // User Feature Flags
+    sandbox: createSandboxClient({ httpClient }), // RAG Sandbox Dashboard
     delete: (path: string) => httpClient.delete(path),
   };
 
