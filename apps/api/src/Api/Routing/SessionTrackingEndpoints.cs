@@ -110,6 +110,9 @@ internal static class SessionTrackingEndpoints
         MapAddSessionEventEndpoint(group);
         MapGetSessionEventsEndpoint(group);
 
+        // Turn summary AI data endpoint (Issue #277)
+        MapGetTurnSummaryDataEndpoint(group);
+
         return group;
     }
 
@@ -1942,6 +1945,31 @@ internal static class SessionTrackingEndpoints
         .Produces<GetSessionEventsResult>(200)
         .Produces(401)
         .Produces(404);
+    }
+
+    // === Issue #277: Turn Summary AI ===
+
+    private static void MapGetTurnSummaryDataEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/turn-summary", async (
+            Guid sessionId,
+            IMediator mediator,
+            [FromQuery] DateTime? from = null,
+            [FromQuery] DateTime? to = null,
+            [FromQuery] int? lastN = null,
+            CancellationToken ct = default) =>
+        {
+            var query = new GetTurnSummaryDataQuery(sessionId, from, to, lastN);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GetTurnSummaryData")
+        .WithTags("SessionTracking", "AI")
+        .WithSummary("Get session events for AI turn summary generation")
+        .WithDescription("Returns session events within a time range or last N events for AI summarization. Issue #277.")
+        .Produces<GetTurnSummaryDataResult>(200)
+        .Produces(401);
     }
 
     internal static RouteGroupBuilder MapSessionStatisticsEndpoints(this RouteGroupBuilder group)
