@@ -20,7 +20,6 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public class StreamSetupGuideQueryHandlerTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly Mock<IQdrantService> _qdrantServiceMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
     private readonly IConfiguration _configuration;
@@ -31,7 +30,6 @@ public class StreamSetupGuideQueryHandlerTests
     public StreamSetupGuideQueryHandlerTests()
     {
         _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _qdrantServiceMock = new Mock<IQdrantService>();
         _llmServiceMock = new Mock<ILlmService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
         _loggerMock = new Mock<ILogger<StreamSetupGuideQueryHandler>>();
@@ -43,7 +41,6 @@ public class StreamSetupGuideQueryHandlerTests
 
         _handler = new StreamSetupGuideQueryHandler(
             _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
             _configuration,
@@ -116,7 +113,6 @@ STEP 4: Determine First Player
 The youngest player goes first.";
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock(llmResponse, totalTokens: 100);
 
         // Act
@@ -162,7 +158,6 @@ STEP 3: Final Setup
 This is required.";
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock(llmResponse);
 
         // Act
@@ -230,21 +225,13 @@ This is required.";
     }
 
     [Fact]
-    public async Task Handle_QdrantReturnsNoResults_ReturnsDefaultSteps()
+    public async Task Handle_NoVectorResults_ReturnsDefaultSteps()
     {
-        // Arrange
+        // Arrange — Qdrant removed; handler always gets no vector results
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
         SetupEmbeddingMock();
-
-        _qdrantServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SearchResult
-            {
-                Success = true,
-                Results = new List<SearchResultItem>() // Empty results
-            });
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -257,7 +244,7 @@ This is required.";
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
         Assert.Equal(5, stepEvents.Count); // Default steps
 
-        // Should NOT call LLM
+        // Should NOT call LLM when no vector results
         _llmServiceMock.Verify(
             x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Never
@@ -272,7 +259,6 @@ This is required.";
         var query = new StreamSetupGuideQuery(gameId);
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
 
         _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
@@ -298,7 +284,6 @@ This is required.";
         var query = new StreamSetupGuideQuery(gameId);
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock(""); // Empty response
 
         // Act
@@ -316,14 +301,12 @@ This is required.";
     [Fact]
     public async Task Handle_ExceptionDuringGeneration_ReturnsDefaultSteps()
     {
-        // Arrange
+        // Arrange — Qdrant removed; embedding failure triggers graceful degradation
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
-        SetupEmbeddingMock();
-
-        _qdrantServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
+        _embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Unexpected error"));
 
         // Act
@@ -447,14 +430,12 @@ This is required.";
             .ReturnsAsync(customPrompt);
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock("STEP 1: Test\nTest instruction");
 
         // Create handler with prompt database enabled
         var configWithPromptDb = CreateConfiguration(promptDatabaseEnabled: true);
         var handlerWithPromptDb = new StreamSetupGuideQueryHandler(
             _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
             configWithPromptDb,
@@ -490,7 +471,6 @@ This is required.";
         var query = new StreamSetupGuideQuery(gameId);
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock("STEP 1: Test\nTest instruction");
 
         // Use default handler (prompt database disabled in constructor)
@@ -526,14 +506,12 @@ This is required.";
             .ThrowsAsync(new Exception("Database error"));
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock("STEP 1: Test\nTest instruction");
 
         // Create handler with prompt database enabled
         var configWithPromptDb = CreateConfiguration(promptDatabaseEnabled: true);
         var handlerWithPromptDb = new StreamSetupGuideQueryHandler(
             _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
             configWithPromptDb,
@@ -563,7 +541,6 @@ This is required.";
 
         var llmResponse = "STEP 1: Quick Setup\nJust one step.";
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock(llmResponse);
 
         // Act
@@ -601,7 +578,6 @@ STEP 4: Fourth
 Instruction 4";
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock(llmResponse);
 
         // Act
@@ -621,38 +597,6 @@ Instruction 4";
         Assert.Equal(8, complete.estimatedReadingTimeMinutes); // 4 steps * 2 min/step
     }
 
-    [Fact]
-    public async Task Handle_ConfidenceScoreFromSearchResults()
-    {
-        // Arrange
-        var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
-
-        var searchResults = new List<SearchResultItem>
-        {
-            new SearchResultItem { Text = "Rule 1", PdfId = Guid.NewGuid().ToString(), Page = 1, Score = 0.75f },
-            new SearchResultItem { Text = "Rule 2", PdfId = Guid.NewGuid().ToString(), Page = 2, Score = 0.92f },
-            new SearchResultItem { Text = "Rule 3", PdfId = Guid.NewGuid().ToString(), Page = 3, Score = 0.81f }
-        };
-
-        SetupEmbeddingMock();
-        SetupQdrantMock(gameId, searchResults);
-        SetupLlmMock("STEP 1: Test\nInstruction");
-
-        // Act
-        var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
-        {
-            events.Add(evt);
-        }
-
-        // Assert
-        var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.True(complete.confidence.HasValue);
-        Assert.Equal(0.92, complete.confidence.Value, 0.001); // Max score
-    }
     private static IConfiguration CreateConfiguration(bool promptDatabaseEnabled)
     {
         var configBuilder = new ConfigurationBuilder();
@@ -675,7 +619,6 @@ STEP 3: Distribute Materials
 Give each player their starting items.";
 
         SetupEmbeddingMock();
-        SetupQdrantMock("game123", CreateSampleSearchResults());
         SetupLlmMock(llmResponse);
     }
 
@@ -691,16 +634,6 @@ Give each player their starting items.";
             });
     }
 
-    private void SetupQdrantMock(string gameId, List<SearchResultItem> results)
-    {
-        _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SearchResult
-            {
-                Success = true,
-                Results = results
-            });
-    }
 
     private void SetupLlmMock(string response, int totalTokens = 50)
     {
@@ -714,27 +647,5 @@ Give each player their starting items.";
             ));
     }
 
-    private List<SearchResultItem> CreateSampleSearchResults()
-    {
-        return new List<SearchResultItem>
-        {
-            new SearchResultItem
-            {
-                Text = "Setup instructions for the game.",
-                PdfId = Guid.NewGuid().ToString(),
-                Page = 1,
-                ChunkIndex = 0,
-                Score = 0.9f
-            },
-            new SearchResultItem
-            {
-                Text = "Player starting conditions.",
-                PdfId = Guid.NewGuid().ToString(),
-                Page = 2,
-                ChunkIndex = 1,
-                Score = 0.85f
-            }
-        };
-    }
 }
 
