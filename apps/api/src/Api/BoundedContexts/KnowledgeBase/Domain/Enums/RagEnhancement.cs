@@ -29,7 +29,7 @@ public static class RagEnhancementExtensions
         RagEnhancement.RaptorRetrieval => "rag.enhancement.raptor-retrieval",
         RagEnhancement.RagFusionQueries => "rag.enhancement.rag-fusion-queries",
         RagEnhancement.GraphTraversal => "rag.enhancement.graph-traversal",
-        _ => string.Empty
+        _ => throw new ArgumentOutOfRangeException(nameof(flag), flag, "No feature flag key for this enhancement")
     };
 
     public static int GetExtraCredits(this RagEnhancement flag, bool useBalancedForAux)

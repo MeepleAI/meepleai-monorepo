@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
-internal class RagEnhancementService : IRagEnhancementService
+internal sealed class RagEnhancementService : IRagEnhancementService
 {
     private readonly IFeatureFlagService _featureFlagService;
     private readonly ILogger<RagEnhancementService> _logger;
@@ -24,17 +24,9 @@ internal class RagEnhancementService : IRagEnhancementService
 
         var active = RagEnhancement.None;
 
-        var allFlags = new[]
+        foreach (var flag in Enum.GetValues<RagEnhancement>())
         {
-            RagEnhancement.AdaptiveRouting,
-            RagEnhancement.CragEvaluation,
-            RagEnhancement.RaptorRetrieval,
-            RagEnhancement.RagFusionQueries,
-            RagEnhancement.GraphTraversal
-        };
-
-        foreach (var flag in allFlags)
-        {
+            if (flag == RagEnhancement.None) continue;
             cancellationToken.ThrowIfCancellationRequested();
 
             var key = flag.ToFeatureFlagKey();

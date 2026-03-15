@@ -47,9 +47,9 @@ public class RagEnhancementTests
     }
 
     [Fact]
-    public void ToFeatureFlagKey_None_ShouldReturnEmptyString()
+    public void ToFeatureFlagKey_None_ShouldThrow()
     {
-        Assert.Equal(string.Empty, RagEnhancement.None.ToFeatureFlagKey());
+        Assert.Throws<ArgumentOutOfRangeException>(() => RagEnhancement.None.ToFeatureFlagKey());
     }
 
     [Theory]
