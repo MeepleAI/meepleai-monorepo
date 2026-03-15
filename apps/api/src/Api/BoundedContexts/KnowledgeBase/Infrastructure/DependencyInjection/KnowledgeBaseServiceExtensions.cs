@@ -125,6 +125,12 @@ internal static class KnowledgeBaseServiceExtensions
         // RAG Enhancements: CRAG retrieval relevance evaluator (heuristic + LLM fallback)
         services.AddScoped<IRetrievalRelevanceEvaluator, RetrievalRelevanceEvaluator>();
 
+        // RAG Enhancements: FAST-model query expander for cost-optimized RAG-Fusion
+        services.AddScoped<IQueryExpander, QueryExpander>();
+
+        // RAG Enhancements: RAPTOR hierarchical indexer for multi-level document summaries
+        services.AddScoped<IRaptorIndexer, RaptorIndexer>();
+
         // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
         services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
         services.AddSingleton<Domain.Services.MultiAgentRouter.RoutingMetricsCollector>();
