@@ -1,9 +1,11 @@
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Infrastructure.Configuration;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Scheduling;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 
@@ -20,8 +22,12 @@ internal static class UserNotificationsServiceExtensions
     /// <summary>
     /// Registers all UserNotifications bounded context services.
     /// </summary>
-    public static IServiceCollection AddUserNotificationsContext(this IServiceCollection services)
+    public static IServiceCollection AddUserNotificationsContext(this IServiceCollection services, IConfiguration configuration)
     {
+        // Slack notification configuration binding
+        services.Configure<SlackNotificationConfiguration>(
+            configuration.GetSection(SlackNotificationConfiguration.SectionName));
+
         // Register repositories
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<INotificationPreferencesRepository, NotificationPreferencesRepository>();

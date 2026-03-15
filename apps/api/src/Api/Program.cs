@@ -326,7 +326,7 @@ builder.Services.AddAdministrationContext(builder.Configuration);
 builder.Services.AddDocumentProcessingContext(builder.Configuration);
 
 // ISSUE-2053: UserNotifications bounded context
-builder.Services.AddUserNotificationsContext();
+builder.Services.AddUserNotificationsContext(builder.Configuration);
 
 // UserLibrary bounded context
 builder.Services.AddUserLibraryContext();
