@@ -56,7 +56,8 @@ export class AgentChatPage extends BasePage {
       // Indicator may never appear if response is fast
     }
 
-    await this.page.waitForTimeout(1000);
+    // Wait for response text to be non-empty (deterministic)
+    await expect(responseLocator).not.toBeEmpty({ timeout: 5_000 });
 
     const responseText = (await responseLocator.textContent()) ?? '';
     return responseText.trim();

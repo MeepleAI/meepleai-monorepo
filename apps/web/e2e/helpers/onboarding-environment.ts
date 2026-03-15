@@ -44,7 +44,7 @@ function resolveEnvironment(): OnboardingEnvironment {
     apiURL: 'http://localhost:8080',
     admin: {
       email: process.env.E2E_ADMIN_EMAIL ?? 'admin@meepleai.dev',
-      password: process.env.E2E_ADMIN_PASSWORD ?? 'pVKOMQNK0tFNgGlX',
+      password: process.env.E2E_ADMIN_PASSWORD ?? 'changeme', // Set E2E_ADMIN_PASSWORD env var
     },
     email: { strategy: 'api-intercept' },
     seedGameName: 'Pandemic',

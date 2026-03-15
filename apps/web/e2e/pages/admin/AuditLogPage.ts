@@ -20,23 +20,13 @@ export class AuditLogPage extends BasePage {
 
     const auditEntries = this.page.locator('[data-testid="audit-log-entry"], tr, [role="row"]');
 
-    let matchingEntry = auditEntries
+    const matchingEntry = auditEntries
       .filter({
         hasText: targetIdentifier,
       })
       .filter({
         hasText: /role/i,
       });
-
-    const hasMatch = await matchingEntry
-      .first()
-      .isVisible()
-      .catch(() => false);
-    if (!hasMatch) {
-      matchingEntry = auditEntries.filter({
-        hasText: /role.*change|change.*role/i,
-      });
-    }
 
     await expect(matchingEntry.first()).toBeVisible({ timeout: 10_000 });
 

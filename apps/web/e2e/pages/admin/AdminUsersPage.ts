@@ -26,7 +26,8 @@ export class AdminUsersPage extends BasePage {
       .locator('[data-testid="invite-role-select"]')
       .or(this.page.getByLabel(/role/i));
     if (await roleSelect.isVisible()) {
-      await roleSelect.selectOption(role);
+      await roleSelect.click();
+      await this.page.getByRole('option', { name: new RegExp(role, 'i') }).click();
     }
   }
 

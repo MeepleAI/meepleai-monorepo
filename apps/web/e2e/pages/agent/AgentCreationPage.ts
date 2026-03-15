@@ -53,7 +53,8 @@ export class AgentCreationPage extends BasePage {
   }
 
   async submitCreation(): Promise<AgentCreationResult> {
-    const responsePromise = this.page.waitForResponse(
+    // Register BOTH response interceptors BEFORE clicking
+    const agentResponsePromise = this.page.waitForResponse(
       resp =>
         resp.url().includes('/agents') &&
         resp.request().method() === 'POST' &&
@@ -61,32 +62,35 @@ export class AgentCreationPage extends BasePage {
         resp.status() < 300
     );
 
+    const sessionResponsePromise = this.page
+      .waitForResponse(
+        resp => resp.url().includes('/game-sessions') && resp.status() >= 200 && resp.status() < 300
+      )
+      .catch(() => null); // Optional - may not fire
+
     await this.click(
       this.page
         .locator('[data-testid="create-agent-submit"]')
         .or(this.page.getByRole('button', { name: /create|submit/i }))
     );
 
-    const response = await responsePromise;
-    const data = await response.json();
+    const agentResponse = await agentResponsePromise;
+    const agentData = await agentResponse.json();
 
-    let gameSessionId = data.gameSessionId ?? '';
+    let gameSessionId = agentData.gameSessionId ?? '';
     if (!gameSessionId) {
-      try {
-        const sessionResponse = await this.page.waitForResponse(
-          resp =>
-            resp.url().includes('/game-sessions') && resp.status() >= 200 && resp.status() < 300,
-          { timeout: 10_000 }
-        );
+      const sessionResponse = await Promise.race([
+        sessionResponsePromise,
+        new Promise<null>(resolve => setTimeout(() => resolve(null), 10_000)),
+      ]);
+      if (sessionResponse) {
         const sessionData = await sessionResponse.json();
         gameSessionId = sessionData.id ?? sessionData.gameSessionId ?? '';
-      } catch {
-        // gameSessionId may be in the agent response already
       }
     }
 
     return {
-      agentId: data.id ?? data.agentId ?? '',
+      agentId: agentData.id ?? agentData.agentId ?? '',
       gameSessionId,
     };
   }

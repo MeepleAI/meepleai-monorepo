@@ -1,4 +1,5 @@
-import { test, expect, sharedState, ensureAdminAuth } from '../fixtures/onboarding-flow.fixture';
+import { test, expect, ensureAdminAuth } from '../fixtures/onboarding-flow.fixture';
+import { type OnboardingFlowState } from '../fixtures/onboarding-flow.fixture';
 import { extractInvitation } from '../helpers/email-strategy';
 import { cleanupOnboardingTest } from '../helpers/onboarding-cleanup';
 import { env } from '../helpers/onboarding-environment';
@@ -20,20 +21,22 @@ const testUserPassword = `E2eTest!${timestamp}`;
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Admin-User Onboarding Flow', () => {
-  test.afterAll(async ({ browser }) => {
-    if (sharedState.adminPage) {
+  const state: Partial<OnboardingFlowState> = {};
+
+  test.afterAll(async () => {
+    if (state.adminPage) {
       try {
-        await cleanupOnboardingTest(sharedState.adminPage.request, {
-          testUserId: sharedState.testUserId,
-          agentId: sharedState.agentId,
+        await cleanupOnboardingTest(state.adminPage.request, {
+          testUserId: state.testUserId,
+          agentId: state.agentId,
         });
       } catch (e) {
         console.warn('Cleanup failed (orphaned test data may remain):', e);
       }
     }
 
-    if (sharedState.userContext) await sharedState.userContext.close();
-    if (sharedState.adminContext) await sharedState.adminContext.close();
+    if (state.userContext) await state.userContext.close();
+    if (state.adminContext) await state.adminContext.close();
   });
 
   // ── Test 1: Admin Login ──────────────────────────────────────
@@ -53,25 +56,24 @@ test.describe('Admin-User Onboarding Flow', () => {
         { timeout: 15_000 }
       );
 
-      // Verify admin display name visible in navbar
       const userInfo = adminPage
         .locator('[data-testid="user-display-name"], [data-testid="navbar-user"]')
         .or(adminPage.getByText(env.admin.email));
       await expect(userInfo).toBeVisible({ timeout: 5_000 });
 
-      // Verify no error toasts
       const errorToast = adminPage.locator('[data-testid="toast-error"], .toast-error');
       await expect(errorToast).not.toBeVisible();
     });
 
-    sharedState.adminPage = adminPage;
-    sharedState.adminContext = adminContext;
-    sharedState.adminCredentials = env.admin;
+    state.adminPage = adminPage;
+    state.adminContext = adminContext;
+    state.adminCredentials = env.admin;
   });
 
   // ── Test 2: Admin Invites User ───────────────────────────────
   test('2. Admin invites user via email', async () => {
-    const page = sharedState.adminPage!;
+    if (!state.adminPage) test.skip(true, 'Requires test 1 to pass');
+    const page = state.adminPage!;
     const adminUsersPage = new AdminUsersPage(page);
 
     await test.step('Open invite dialog', async () => {
@@ -87,25 +89,26 @@ test.describe('Admin-User Onboarding Flow', () => {
 
     await test.step('Extract invitation token/URL', async () => {
       const result = await extractInvitation(page, testUserEmail);
-      sharedState.invitationToken = result.invitationToken;
-      sharedState.invitationUrl = result.invitationUrl;
-      sharedState.testUserEmail = testUserEmail;
+      state.invitationToken = result.invitationToken;
+      state.invitationUrl = result.invitationUrl;
+      state.testUserEmail = testUserEmail;
     });
 
-    expect(sharedState.invitationToken).toBeTruthy();
+    expect(state.invitationToken).toBeTruthy();
   });
 
   // ── Test 3: User Accepts Invitation ──────────────────────────
   test('3. User accepts invitation and sets password', async ({ browser }) => {
+    if (!state.invitationToken) test.skip(true, 'Requires test 2 to pass');
     const userContext = await browser.newContext();
     const userPage = await userContext.newPage();
     const acceptPage = new AcceptInvitePage(userPage);
 
     await test.step('Navigate to accept-invite page', async () => {
       if (env.email.strategy === 'mailosaur') {
-        await acceptPage.gotoUrl(sharedState.invitationUrl!);
+        await acceptPage.gotoUrl(state.invitationUrl!);
       } else {
-        await acceptPage.gotoWithToken(sharedState.invitationToken!);
+        await acceptPage.gotoWithToken(state.invitationToken!);
       }
     });
 
@@ -119,14 +122,15 @@ test.describe('Admin-User Onboarding Flow', () => {
       await acceptPage.waitForRedirectToOnboarding();
     });
 
-    sharedState.userPassword = testUserPassword;
-    sharedState.userPage = userPage;
-    sharedState.userContext = userContext;
+    state.userPassword = testUserPassword;
+    state.userPage = userPage;
+    state.userContext = userContext;
   });
 
   // ── Test 4: User Logs In ─────────────────────────────────────
   test('4. User logs in with new password', async () => {
-    const page = sharedState.userPage!;
+    if (!state.userPage) test.skip(true, 'Requires test 3 to pass');
+    const page = state.userPage!;
     const loginPage = new LoginPage(page);
 
     await test.step('Navigate to login and authenticate', async () => {
@@ -152,7 +156,7 @@ test.describe('Admin-User Onboarding Flow', () => {
         const meResponse = await page.request.get(`${env.apiURL}/api/v1/auth/me`);
         if (meResponse.ok()) {
           const meData = await meResponse.json();
-          sharedState.testUserId = meData.id ?? meData.userId ?? '';
+          state.testUserId = meData.id ?? meData.userId ?? '';
         }
       } catch {
         console.warn('Could not capture testUserId from /auth/me');
@@ -162,7 +166,8 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 5: User Adds Game to Collection ─────────────────────
   test('5. User adds game to collection', async () => {
-    const page = sharedState.userPage!;
+    if (!state.userPage) test.skip(true, 'Requires test 4 to pass');
+    const page = state.userPage!;
     const libraryPage = new LibraryPage(page);
 
     await test.step('Navigate to library', async () => {
@@ -181,19 +186,20 @@ test.describe('Admin-User Onboarding Flow', () => {
         );
       }
 
-      sharedState.gameId = gameId;
-      sharedState.gameTitle = gameTitle || env.seedGameName;
+      state.gameId = gameId;
+      state.gameTitle = gameTitle || env.seedGameName;
     });
 
     await test.step('Confirm and verify', async () => {
       await libraryPage.confirmAddToCollection();
-      await libraryPage.verifyGameInCollection(sharedState.gameTitle!);
+      await libraryPage.verifyGameInCollection(state.gameTitle!);
     });
   });
 
   // ── Test 6: User Creates Agent ───────────────────────────────
   test('6. User creates agent for the game', async () => {
-    const page = sharedState.userPage!;
+    if (!state.userPage || !state.gameTitle) test.skip(true, 'Requires test 5 to pass');
+    const page = state.userPage!;
     const agentPage = new AgentCreationPage(page);
 
     await test.step('Open agent creation', async () => {
@@ -202,17 +208,17 @@ test.describe('Admin-User Onboarding Flow', () => {
     });
 
     await test.step('Configure agent', async () => {
-      await agentPage.selectGame(sharedState.gameTitle!);
+      await agentPage.selectGame(state.gameTitle!);
       await agentPage.selectStrategy('Tutor');
       await agentPage.selectFreeTier();
     });
 
     await test.step('Submit and capture IDs', async () => {
       const result = await agentPage.submitCreation();
-      sharedState.agentId = result.agentId;
-      sharedState.gameSessionId = result.gameSessionId;
+      state.agentId = result.agentId;
+      state.gameSessionId = result.gameSessionId;
 
-      expect(sharedState.agentId).toBeTruthy();
+      expect(state.agentId).toBeTruthy();
     });
 
     await test.step('Wait for agent ready', async () => {
@@ -222,15 +228,16 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 7: User Chats with Agent ────────────────────────────
   test('7. User asks agent about game scope and turn', async () => {
-    const page = sharedState.userPage!;
+    if (!state.userPage || !state.agentId) test.skip(true, 'Requires test 6 to pass');
+    const page = state.userPage!;
     const chatPage = new AgentChatPage(page);
 
     await test.step('Open chat with agent', async () => {
-      await chatPage.navigateToChat(sharedState.agentId!);
+      await chatPage.navigateToChat(state.agentId!);
     });
 
     await test.step('Send question and wait for response', async () => {
-      const gameTitle = sharedState.gameTitle!;
+      const gameTitle = state.gameTitle!;
       await chatPage.sendMessage(
         `Qual è lo scopo del gioco ${gameTitle}? Descrivimi un turno di gioco.`
       );
@@ -243,9 +250,10 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 8: Admin Changes Role & Checks Audit Log ────────────
   test('8. Admin changes user role and verifies audit log', async () => {
-    const page = sharedState.adminPage!;
+    if (!state.adminPage || !state.testUserEmail) test.skip(true, 'Requires tests 1-2 to pass');
+    const page = state.adminPage!;
 
-    await ensureAdminAuth(page);
+    await ensureAdminAuth(page, state.adminCredentials!);
 
     const adminUsersPage = new AdminUsersPage(page);
     const auditLogPage = new AuditLogPage(page);
