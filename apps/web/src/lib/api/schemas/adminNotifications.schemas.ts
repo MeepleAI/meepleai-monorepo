@@ -20,6 +20,7 @@ export const SendManualNotificationResultSchema = z.object({
   totalRecipients: z.number().int(),
   dispatched: z.number().int(),
   skipped: z.number().int(),
+  wasCapped: z.boolean(),
 });
 
 export type SendManualNotificationRequest = z.infer<typeof SendManualNotificationRequestSchema>;

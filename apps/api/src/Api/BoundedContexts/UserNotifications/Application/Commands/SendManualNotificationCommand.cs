@@ -1,13 +1,4 @@
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
-using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
-using Api.Infrastructure;
-using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
-using FluentValidation;
-using MediatR;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserNotifications.Application.Commands;
 
@@ -32,4 +23,5 @@ internal record SendManualNotificationCommand : ICommand<SendManualNotificationR
 internal record SendManualNotificationResult(
     int TotalRecipients,
     int Dispatched,
-    int Skipped);
+    int Skipped,
+    bool WasCapped);

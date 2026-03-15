@@ -33,6 +33,9 @@ export function ChannelSelector({ selected, onChange }: ChannelSelectorProps) {
           <button
             key={channel.id}
             type="button"
+            role="switch"
+            aria-checked={isSelected}
+            aria-label={`${channel.label} channel`}
             onClick={() => toggle(channel.id)}
             className={cn(
               'flex items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all',

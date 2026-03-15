@@ -5,6 +5,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
 /// Follows the same pattern as NewShareRequestAdminAlertHandler.
 /// </summary>
 internal sealed class SendManualNotificationCommandHandler
-    : IRequestHandler<SendManualNotificationCommand, SendManualNotificationResult>
+    : ICommandHandler<SendManualNotificationCommand, SendManualNotificationResult>
 {
     private const int MaxRecipients = 100;
 
@@ -44,9 +45,10 @@ internal sealed class SendManualNotificationCommandHandler
         var recipientIds = await ResolveRecipientsAsync(request, cancellationToken).ConfigureAwait(false);
 
         if (recipientIds.Count == 0)
-            return new SendManualNotificationResult(0, 0, 0);
+            return new SendManualNotificationResult(0, 0, 0, false);
 
-        if (recipientIds.Count > MaxRecipients)
+        var wasCapped = recipientIds.Count > MaxRecipients;
+        if (wasCapped)
         {
             _logger.LogWarning(
                 "Manual notification capped at {Max} recipients (requested {Requested})",
@@ -66,7 +68,7 @@ internal sealed class SendManualNotificationCommandHandler
             channels = request.Channels
         });
 
-        // Resolve user emails for email channel
+        // Resolve user info for email channel
         Dictionary<Guid, (string Email, string? DisplayName)>? userEmails = null;
         if (channels.Contains("email"))
         {
@@ -83,10 +85,12 @@ internal sealed class SendManualNotificationCommandHandler
 
         foreach (var userId in recipientIds)
         {
-            try
+            var recipientDispatched = true;
+
+            // In-app notification
+            if (channels.Contains("inapp"))
             {
-                // In-app notification
-                if (channels.Contains("inapp"))
+                try
                 {
                     var notification = new Notification(
                         id: Guid.NewGuid(),
@@ -100,29 +104,43 @@ internal sealed class SendManualNotificationCommandHandler
 
                     await _notificationRepo.AddAsync(notification, cancellationToken).ConfigureAwait(false);
                 }
+#pragma warning disable CA1031
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create in-app notification for user {UserId}", userId);
+                    recipientDispatched = false;
+                }
+#pragma warning restore CA1031
+            }
 
-                // Email via queue
-                if (channels.Contains("email") && userEmails != null && userEmails.TryGetValue(userId, out var userInfo))
+            // Email via queue
+            if (channels.Contains("email") && userEmails != null && userEmails.TryGetValue(userId, out var userInfo))
+            {
+                try
                 {
                     await _mediator.Send(new EnqueueEmailCommand(
                         UserId: userId,
                         To: userInfo.Email,
                         Subject: $"{request.Title} - MeepleAI",
                         TemplateName: "admin_manual_notification",
-                        UserName: userInfo.DisplayName,
-                        FileName: request.Title
+                        UserName: userInfo.DisplayName ?? userInfo.Email,
+                        FileName: request.Title,
+                        ErrorMessage: request.Message
                     ), cancellationToken).ConfigureAwait(false);
                 }
-
-                dispatched++;
-            }
 #pragma warning disable CA1031
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to dispatch manual notification to user {UserId}", userId);
-                skipped++;
-            }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to enqueue email for user {UserId}", userId);
+                    recipientDispatched = false;
+                }
 #pragma warning restore CA1031
+            }
+
+            if (recipientDispatched)
+                dispatched++;
+            else
+                skipped++;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -131,13 +149,15 @@ internal sealed class SendManualNotificationCommandHandler
             "Admin {AdminName} sent manual notification '{Title}' to {Dispatched}/{Total} recipients",
             request.SentByAdminName, request.Title, dispatched, recipientIds.Count);
 
-        return new SendManualNotificationResult(recipientIds.Count, dispatched, skipped);
+        return new SendManualNotificationResult(recipientIds.Count, dispatched, skipped, wasCapped);
     }
 
     private async Task<List<Guid>> ResolveRecipientsAsync(
         SendManualNotificationCommand request, CancellationToken ct)
     {
-        var query = _dbContext.Set<UserEntity>().AsNoTracking();
+        var query = _dbContext.Set<UserEntity>()
+            .AsNoTracking()
+            .Where(u => !u.IsSuspended);
 
         return request.RecipientType.ToLowerInvariant() switch
         {

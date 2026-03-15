@@ -37,9 +37,11 @@ export default function ComposeNotificationPage() {
     mutationFn: (request: SendManualNotificationRequest) =>
       api.adminNotifications.sendManualNotification(request),
     onSuccess: data => {
+      const cappedMsg = data.wasCapped ? ' (capped at 100)' : '';
       toast.success(
         `Notification sent to ${data.dispatched} recipient${data.dispatched !== 1 ? 's' : ''}` +
-          (data.skipped > 0 ? ` (${data.skipped} skipped)` : '')
+          (data.skipped > 0 ? ` (${data.skipped} skipped)` : '') +
+          cappedMsg
       );
       setTitle('');
       setMessage('');
