@@ -41,26 +41,32 @@ export interface OnboardingEnvironment {
 function resolveEnvironment(): OnboardingEnvironment {
   const isStaging = process.env.E2E_ENV === 'staging';
 
+  const e2eSecret = readSecretFile('e2e.secret');
+  const adminSecret = readSecretFile('admin.secret');
+
   if (isStaging) {
     return {
       name: 'staging',
       baseURL: 'https://meepleai.app',
       apiURL: 'https://api.meepleai.app',
       admin: {
-        email: process.env.E2E_ADMIN_EMAIL!,
-        password: process.env.E2E_ADMIN_PASSWORD!,
+        email:
+          process.env.E2E_ADMIN_EMAIL ??
+          e2eSecret['E2E_ADMIN_EMAIL'] ??
+          adminSecret['ADMIN_EMAIL'] ??
+          'admin@meepleai.app',
+        password: process.env.E2E_ADMIN_PASSWORD ?? adminSecret['ADMIN_PASSWORD'] ?? 'changeme',
       },
       email: {
         strategy: 'mailosaur',
-        mailosaurApiKey: process.env.E2E_MAILOSAUR_API_KEY!,
-        mailosaurServerId: process.env.E2E_MAILOSAUR_SERVER_ID!,
+        mailosaurApiKey: process.env.E2E_MAILOSAUR_API_KEY ?? e2eSecret['E2E_MAILOSAUR_API_KEY']!,
+        mailosaurServerId:
+          process.env.E2E_MAILOSAUR_SERVER_ID ?? e2eSecret['E2E_MAILOSAUR_SERVER_ID']!,
       },
       seedGameName: 'Catan',
       timeouts: { email: 30_000, agentReady: 30_000, chatResponse: 60_000 },
     };
   }
-
-  const adminSecret = readSecretFile('admin.secret');
 
   return {
     name: 'local',
