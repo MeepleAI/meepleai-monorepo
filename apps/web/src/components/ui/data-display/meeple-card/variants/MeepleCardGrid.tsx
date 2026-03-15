@@ -115,7 +115,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     onTimeTravelToggle,
     documentStatus,
     linkCount,
-    firstLinkPreview,
+    firstLinkPreview: _firstLinkPreview,
     onLinksClick,
     kbCards,
   } = props;
