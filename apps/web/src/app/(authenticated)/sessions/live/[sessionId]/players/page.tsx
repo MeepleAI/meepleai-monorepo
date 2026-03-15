@@ -40,9 +40,3 @@ export default function PlayersPage({ params }: PlayersPageProps) {
     />
   );
 }
-
-// Export metadata for the tab label
-export const metadata = {
-  title: 'Giocatori',
-  description: `Gestisci i giocatori della sessione`,
-};
