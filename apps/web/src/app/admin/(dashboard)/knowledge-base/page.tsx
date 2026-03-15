@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+
 import {
   FileTextIcon,
   DatabaseIcon,
@@ -11,6 +13,7 @@ import {
 import { type Metadata } from 'next';
 import Link from 'next/link';
 
+import { KbHubClient } from '@/components/admin/knowledge-base/hub/kb-hub-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 
 export const metadata: Metadata = {
@@ -95,6 +98,18 @@ export default function KnowledgeBasePage() {
           Manage documents, vector collections, and the RAG retrieval pipeline
         </p>
       </div>
+
+      {/* Live Dashboard Widgets */}
+      <Suspense
+        fallback={
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-[280px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
+            <div className="h-[280px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
+          </div>
+        }
+      >
+        <KbHubClient />
+      </Suspense>
 
       {/* Section Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
