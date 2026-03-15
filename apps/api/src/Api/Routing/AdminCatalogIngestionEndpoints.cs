@@ -168,6 +168,7 @@ internal static class AdminCatalogIngestionEndpoints
             return Results.Ok(result);
         })
         .DisableAntiforgery()
+        .RequireRateLimiting("BulkImportAdmin")
         .WithName("ExcelPreview")
         .WithOpenApi(operation =>
         {

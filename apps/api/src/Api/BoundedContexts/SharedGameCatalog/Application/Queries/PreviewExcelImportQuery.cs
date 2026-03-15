@@ -124,10 +124,12 @@ internal sealed class PreviewExcelImportQueryHandler
                 [new ExcelRowError(1, "Name", "Required column 'Name' not found in header row")], 0);
         }
 
-        // ── Load all existing games from DB ──
+        // ── Load existing games from DB (capped for memory safety) ──
         var existingGames = await _context.SharedGames
             .AsNoTracking()
             .Where(g => !g.IsDeleted)
+            .OrderBy(g => g.Title)
+            .Take(MaxRows * 2)
             .Select(g => new ExistingGameProjection(
                 g.Id,
                 g.Title,

@@ -139,27 +139,31 @@ internal sealed class ConfirmExcelImportCommandHandler
                     continue;
                 }
 
-                game.UpdateInfo(
-                    mod.Title,
-                    mod.YearPublished ?? game.YearPublished,
-                    !string.IsNullOrWhiteSpace(mod.Description) ? mod.Description : game.Description,
-                    mod.MinPlayers ?? game.MinPlayers,
-                    mod.MaxPlayers ?? game.MaxPlayers,
-                    mod.PlayingTimeMinutes ?? game.PlayingTimeMinutes,
-                    mod.MinAge ?? game.MinAge,
-                    game.ComplexityRating,
-                    game.AverageRating,
-                    game.ImageUrl,
-                    game.ThumbnailUrl,
-                    game.Rules,
-                    command.UserId);
-
-                // Assign BGG ID if provided and game is skeleton/failed
-                if (mod.BggId.HasValue && !game.BggId.HasValue &&
-                    (game.GameDataStatus == GameDataStatus.Skeleton ||
-                     game.GameDataStatus == GameDataStatus.Failed))
+                // Skeleton/Failed games: only assign BGG ID (UpdateInfo fails on zero-filled fields)
+                if (game.GameDataStatus is GameDataStatus.Skeleton or GameDataStatus.Failed)
                 {
-                    game.AssignBggId(mod.BggId.Value, command.UserId);
+                    if (mod.BggId.HasValue && !game.BggId.HasValue)
+                    {
+                        game.AssignBggId(mod.BggId.Value, command.UserId);
+                    }
+                }
+                else
+                {
+                    // Enriched/Complete games: full update with domain validation
+                    game.UpdateInfo(
+                        mod.Title,
+                        mod.YearPublished ?? game.YearPublished,
+                        !string.IsNullOrWhiteSpace(mod.Description) ? mod.Description : game.Description,
+                        mod.MinPlayers ?? game.MinPlayers,
+                        mod.MaxPlayers ?? game.MaxPlayers,
+                        mod.PlayingTimeMinutes ?? game.PlayingTimeMinutes,
+                        mod.MinAge ?? game.MinAge,
+                        game.ComplexityRating,
+                        game.AverageRating,
+                        game.ImageUrl,
+                        game.ThumbnailUrl,
+                        game.Rules,
+                        command.UserId);
                 }
 
                 _repository.Update(game);
