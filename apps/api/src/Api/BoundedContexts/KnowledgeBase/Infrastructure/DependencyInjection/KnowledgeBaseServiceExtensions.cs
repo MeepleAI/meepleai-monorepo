@@ -326,6 +326,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Ownership/RAG access: cascading access check (admin → public → ownership)
         services.AddScoped<IRagAccessService, RagAccessService>();
 
+        // RAG enhancements orchestrator — feature flag integration for advanced RAG features
+        services.AddScoped<IRagEnhancementService, RagEnhancementService>();
+
         // E4-3: Session query budget — Redis-backed per-session AI query tracking
         services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();
     }
