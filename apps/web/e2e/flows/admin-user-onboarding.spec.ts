@@ -118,67 +118,35 @@ test.describe('Admin-User Onboarding Flow', () => {
       await acceptPage.verifyStrengthIndicator('Strong');
     });
 
-    await test.step('Submit and wait for redirect', async () => {
-      // Dismiss cookie consent first
+    await test.step('Dismiss cookie and submit', async () => {
+      // Cookie consent blocks the form — dismiss it first
       const cookieBtn = userPage.getByRole('button', { name: /essential only|accept all/i });
-      if (
-        await cookieBtn
-          .first()
-          .isVisible({ timeout: 2_000 })
-          .catch(() => false)
-      ) {
-        await cookieBtn.first().click();
-        await userPage.waitForTimeout(500);
-      }
+      await cookieBtn
+        .first()
+        .click({ timeout: 5_000 })
+        .catch(() => {});
+      await userPage.waitForTimeout(500);
 
-      // Debug: screenshot + snapshot before submit
-      await userPage.screenshot({
-        path: 'test-results/debug-accept-invite-before-submit.png',
-        fullPage: true,
-      });
-
-      // Intercept the accept-invite API call
-      const acceptResponsePromise = userPage
-        .waitForResponse(
-          resp => resp.url().includes('accept-invitation') || resp.url().includes('accept-invite')
-        )
+      // Intercept accept-invitation API to verify it succeeds
+      const acceptPromise = userPage
+        .waitForResponse(resp => resp.url().includes('accept-invitation'))
         .catch(() => null);
 
       await acceptPage.submit();
 
-      // Check if the API call was made
       const acceptResponse = await Promise.race([
-        acceptResponsePromise,
-        new Promise<null>(r => setTimeout(() => r(null), 10_000)),
+        acceptPromise,
+        new Promise<null>(r => setTimeout(() => r(null), 15_000)),
       ]);
 
       if (acceptResponse) {
-        console.log(`[DEBUG T3] Accept API: ${acceptResponse.status()} ${acceptResponse.url()}`);
-        if (!acceptResponse.ok()) {
-          const errBody = await acceptResponse.text();
-          console.log(`[DEBUG T3] Accept error: ${errBody}`);
-        }
-      } else {
-        console.log('[DEBUG T3] No accept-invite API call detected in 10s');
+        expect(
+          acceptResponse.ok(),
+          `Accept invite failed: ${acceptResponse.status()}`
+        ).toBeTruthy();
       }
 
       await acceptPage.waitForRedirectAfterAccept();
-    });
-
-    await test.step('Verify account was created via API', async () => {
-      // Verify the test user can actually login
-      const verifyLogin = await userPage.request.post(`${env.apiURL}/api/v1/auth/login`, {
-        data: { email: testUserEmail, password: testUserPassword },
-      });
-      console.log(`[DEBUG T3] Verify login status: ${verifyLogin.status()}`);
-      if (verifyLogin.ok()) {
-        const data = await verifyLogin.json();
-        console.log(`[DEBUG T3] User created: ${data.user?.email}, role: ${data.user?.role}`);
-        state.testUserId = data.user?.id ?? '';
-      } else {
-        const errBody = await verifyLogin.text();
-        console.log(`[DEBUG T3] Verify login failed: ${errBody}`);
-      }
     });
 
     state.userPassword = testUserPassword;
@@ -201,33 +169,33 @@ test.describe('Admin-User Onboarding Flow', () => {
 
     const loginPage = new LoginPage(page);
 
-    await test.step('Authenticate via API and navigate', async () => {
-      // Login via API to get session cookie (more reliable than UI login)
-      const loginResponse = await page.request.post(`${env.apiURL}/api/v1/auth/login`, {
-        data: { email: testUserEmail, password: testUserPassword },
+    await test.step('Login via UI', async () => {
+      await page.goto('/login', { waitUntil: 'domcontentloaded' });
+
+      // Dismiss cookie consent (blocks form interaction)
+      await page
+        .getByRole('button', { name: /essential only|accept all/i })
+        .first()
+        .click({ timeout: 5_000 })
+        .catch(() => {});
+      await page.waitForTimeout(500);
+
+      // Fill and submit login form
+      await loginPage.login(testUserEmail, testUserPassword);
+
+      // Wait for redirect away from /login
+      await page.waitForURL(url => !url.pathname.includes('/login'), {
+        timeout: 15_000,
+        waitUntil: 'domcontentloaded',
       });
-      expect(loginResponse.ok(), `Login failed: ${loginResponse.status()}`).toBeTruthy();
+    });
 
-      const loginData = await loginResponse.json();
-      state.testUserId = loginData.user?.id ?? '';
-      console.log(`[DEBUG T4] API login: ${loginData.user?.email}, role: ${loginData.user?.role}`);
-
-      // Navigate to home to establish frontend session
-      await page.goto('/', { waitUntil: 'domcontentloaded' });
-
-      // Dismiss cookie consent
-      const cookieBtn = page.getByRole('button', { name: /essential only|accept all/i });
-      if (
-        await cookieBtn
-          .first()
-          .isVisible({ timeout: 3_000 })
-          .catch(() => false)
-      ) {
-        await cookieBtn.first().click();
-        await page.waitForTimeout(500);
+    await test.step('Capture user ID', async () => {
+      const meResponse = await page.request.get(`${env.apiURL}/api/v1/auth/me`);
+      if (meResponse.ok()) {
+        const meData = await meResponse.json();
+        state.testUserId = meData.id ?? meData.userId ?? '';
       }
-
-      console.log(`[DEBUG T4] URL after navigate: ${page.url()}`);
     });
   });
 
@@ -237,20 +205,15 @@ test.describe('Admin-User Onboarding Flow', () => {
     const page = state.userPage!;
     const libraryPage = new LibraryPage(page);
 
-    await test.step('Debug: check user role and navigate to library', async () => {
-      // Check actual user role via API
-      const meResponse = await page.request.get(`${env.apiURL}/api/v1/auth/me`);
-      const meData = await meResponse.json();
-      console.log(
-        `[DEBUG] User role: ${meData.role}, email: ${meData.email}, URL before nav: ${page.url()}`
-      );
-
-      // Navigate to library
-      await page.goto('/library', { waitUntil: 'networkidle' });
-      console.log(`[DEBUG] URL after /library nav: ${page.url()}`);
-
-      // Take screenshot for debugging
-      await page.screenshot({ path: 'test-results/debug-library-page.png', fullPage: true });
+    await test.step('Navigate to library', async () => {
+      // Try /library/private which is the actual private games page
+      await page.goto('/library/private', { waitUntil: 'networkidle' });
+      // If redirected, take note of where we are
+      const url = page.url();
+      if (!url.includes('/library')) {
+        // Fallback: try /library
+        await page.goto('/library', { waitUntil: 'networkidle' });
+      }
     });
 
     await test.step('Search and add game', async () => {
