@@ -11,7 +11,7 @@ internal sealed class SlackNotificationConfiguration
     public string ClientSecret { get; set; } = string.Empty;
     public string SigningSecret { get; set; } = string.Empty;
     public string RedirectUri { get; set; } = string.Empty;
-    public Dictionary<string, SlackTeamChannelSettings> TeamChannels { get; set; } = new();
+    public Dictionary<string, SlackTeamChannelSettings> TeamChannels { get; set; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>

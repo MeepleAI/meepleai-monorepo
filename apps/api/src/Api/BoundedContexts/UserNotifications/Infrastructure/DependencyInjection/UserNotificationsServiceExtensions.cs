@@ -37,6 +37,7 @@ internal static class UserNotificationsServiceExtensions
         services.AddScoped<ISlackConnectionRepository, SlackConnectionRepository>(); // Slack connections
 
         // Register services
+        services.AddScoped<INotificationDispatcher, NotificationDispatcher>(); // Multi-channel dispatch
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>(); // Issue #4417
         services.AddSingleton<IUserNotificationBroadcaster, InMemoryUserNotificationBroadcaster>(); // Issue #5005
         services.AddSingleton<IUnsubscribeTokenService, UnsubscribeTokenService>(); // Issue #38
