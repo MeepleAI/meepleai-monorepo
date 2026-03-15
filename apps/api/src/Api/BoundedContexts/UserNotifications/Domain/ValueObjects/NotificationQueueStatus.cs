@@ -21,6 +21,12 @@ internal sealed class NotificationQueueStatus : ValueObject
         Value = value;
     }
 
+    public bool IsPending => string.Equals(Value, Pending.Value, StringComparison.Ordinal);
+    public bool IsProcessing => string.Equals(Value, Processing.Value, StringComparison.Ordinal);
+    public bool IsSent => string.Equals(Value, Sent.Value, StringComparison.Ordinal);
+    public bool IsFailed => string.Equals(Value, Failed.Value, StringComparison.Ordinal);
+    public bool IsDeadLetter => string.Equals(Value, DeadLetter.Value, StringComparison.Ordinal);
+
     /// <summary>
     /// Creates a NotificationQueueStatus from a string value.
     /// Validates against known queue statuses.
