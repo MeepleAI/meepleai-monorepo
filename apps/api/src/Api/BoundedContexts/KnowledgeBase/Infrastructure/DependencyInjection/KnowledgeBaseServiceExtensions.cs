@@ -131,6 +131,9 @@ internal static class KnowledgeBaseServiceExtensions
         // RAG Enhancements: RAPTOR hierarchical indexer for multi-level document summaries
         services.AddScoped<IRaptorIndexer, RaptorIndexer>();
 
+        // RAG Enhancements: Graph RAG entity extractor for knowledge graph construction
+        services.AddScoped<IEntityExtractor, EntityExtractor>();
+
         // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
         services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
         services.AddSingleton<Domain.Services.MultiAgentRouter.RoutingMetricsCollector>();
