@@ -85,6 +85,12 @@ export const ENTITY_ACTIONS: Record<MeepleEntityType, BottomNavActionDef[]> = {
     { id: 'rsvp', label: 'RSVP', icon: UserCheck },
     { id: 'share', label: 'Condividi', icon: Share2 },
   ],
+  collection: [{ id: 'details', label: 'Dettagli', icon: Eye, variant: 'primary' as const }],
+  group: [{ id: 'details', label: 'Dettagli', icon: Eye, variant: 'primary' as const }],
+  location: [{ id: 'details', label: 'Dettagli', icon: Eye, variant: 'primary' as const }],
+  expansion: [{ id: 'details', label: 'Dettagli', icon: Eye, variant: 'primary' as const }],
+  achievement: [{ id: 'details', label: 'Dettagli', icon: Eye, variant: 'primary' as const }],
+  note: [{ id: 'details', label: 'Dettagli', icon: Eye, variant: 'primary' as const }],
   custom: [{ id: 'details', label: 'Dettagli', icon: Eye }],
 };
 
