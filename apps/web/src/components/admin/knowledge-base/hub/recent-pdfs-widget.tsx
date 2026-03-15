@@ -50,6 +50,7 @@ export function RecentPdfsWidget() {
           <Link
             href="/admin/knowledge-base/documents"
             className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 flex items-center gap-1"
+            aria-label="Tutti i documenti"
           >
             Tutti <ArrowRightIcon className="h-3 w-3" />
           </Link>
@@ -81,8 +82,12 @@ export function RecentPdfsWidget() {
                 {pdf.fileName}
               </p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {pdf.gameTitle && <span>{pdf.gameTitle}</span>}
-                {pdf.gameTitle && <span>·</span>}
+                {pdf.gameTitle && (
+                  <>
+                    <span>{pdf.gameTitle}</span>
+                    <span>·</span>
+                  </>
+                )}
                 <span>{formatFileSize(pdf.fileSizeBytes)}</span>
                 <span>·</span>
                 <span className="flex items-center gap-0.5">

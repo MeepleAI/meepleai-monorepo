@@ -1,5 +1,3 @@
-import { Suspense } from 'react';
-
 import {
   FileTextIcon,
   DatabaseIcon,
@@ -100,16 +98,7 @@ export default function KnowledgeBasePage() {
       </div>
 
       {/* Live Dashboard Widgets */}
-      <Suspense
-        fallback={
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-[280px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
-            <div className="h-[280px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
-          </div>
-        }
-      >
-        <KbHubClient />
-      </Suspense>
+      <KbHubClient />
 
       {/* Section Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

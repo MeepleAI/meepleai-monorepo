@@ -13,7 +13,11 @@ import {
   ZapIcon,
 } from 'lucide-react';
 
-import { enqueuePdf } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
+import {
+  enqueuePdf,
+  PRIORITY_NORMAL,
+  PRIORITY_URGENT,
+} from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,7 +88,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
 
         // Auto-enqueue for processing (Urgent=30 puts at head, Normal=10 default)
         try {
-          await enqueuePdf(result.documentId, urgentPriority ? 30 : 10);
+          await enqueuePdf(result.documentId, urgentPriority ? PRIORITY_URGENT : PRIORITY_NORMAL);
         } catch {
           // Enqueue is best-effort - document still uploaded successfully
         }
@@ -139,7 +143,10 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
 
         // Auto-enqueue (Urgent=30 puts at head, Normal=10 default)
         try {
-          await enqueuePdf(completeResult.documentId, urgentPriority ? 30 : 10);
+          await enqueuePdf(
+            completeResult.documentId,
+            urgentPriority ? PRIORITY_URGENT : PRIORITY_NORMAL
+          );
         } catch {
           // best-effort
         }

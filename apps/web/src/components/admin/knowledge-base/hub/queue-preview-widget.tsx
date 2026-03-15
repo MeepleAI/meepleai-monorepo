@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-import { useQueueSSE } from '@/app/admin/(dashboard)/knowledge-base/queue/hooks/use-queue-sse';
 import {
   useQueueList,
   useQueueStats,
@@ -45,10 +44,9 @@ const statusStyles: Record<JobStatus, { badge: string; label: string }> = {
 };
 
 export function QueuePreviewWidget() {
-  const { connectionState } = useQueueSSE(true);
-  const sseConnected = connectionState === 'connected';
-
-  const { data, isLoading } = useQueueList({ pageSize: 5 }, sseConnected);
+  // Hub preview uses polling only — SSE is reserved for the full queue dashboard
+  // to avoid duplicate persistent connections per browser tab
+  const { data, isLoading } = useQueueList({ pageSize: 5 }, false);
 
   const statsQueries = useQueueStats();
   const queuedCount = statsQueries[0]?.data?.total ?? 0;
