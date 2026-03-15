@@ -19,11 +19,11 @@ export function HandDrawer() {
       className="bg-white/55 backdrop-blur-[12px] border-b border-[rgba(180,130,80,0.1)] px-2.5 py-1 pb-1.5"
     >
       {/* Grip handle */}
-      <div
-        role="button"
+      <button
+        type="button"
         aria-label="Espandi/comprimi mano"
         onClick={() => collapseHand()}
-        className="mx-auto mb-1.5 cursor-pointer"
+        className="mx-auto mb-1.5 block cursor-pointer border-none bg-transparent p-0"
         style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(180,130,80,0.2)' }}
       />
 
