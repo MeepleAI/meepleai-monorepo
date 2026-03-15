@@ -13,6 +13,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Caching;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
@@ -117,6 +118,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-3760: Arbitro Agent Service (AI-powered move validation)
         services.AddScoped<IArbitroAgentService, ArbitroAgentService>();
+
+        // RAG Enhancements: Adaptive query complexity classifier (heuristic + LLM fallback)
+        services.AddScoped<IQueryComplexityClassifier, QueryComplexityClassifier>();
 
         // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
         services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
