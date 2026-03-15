@@ -163,9 +163,9 @@ public class NotificationDispatcherTests
     }
 
     [Fact]
-    public async Task DispatchAsync_WithNoChannelsEnabled_StillCreatesInAppNotification()
+    public async Task DispatchAsync_WithNullPreferences_DefaultsToSendingEmail()
     {
-        // Arrange — no preferences returned means no channel checks pass
+        // Arrange — no preferences returned defaults to sending email (fail-open)
         var message = CreateMessage();
         var sut = CreateSut();
 
@@ -177,10 +177,13 @@ public class NotificationDispatcherTests
             r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
-        // No queue items should be added (no preferences = no email/slack dispatch)
+        // Email queue item should be added (null preferences defaults to email enabled)
         _queueRepoMock.Verify(
-            r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+            r => r.AddRangeAsync(
+                It.Is<IEnumerable<NotificationQueueItem>>(items =>
+                    items.Any(i => i.ChannelType == NotificationChannelType.Email)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

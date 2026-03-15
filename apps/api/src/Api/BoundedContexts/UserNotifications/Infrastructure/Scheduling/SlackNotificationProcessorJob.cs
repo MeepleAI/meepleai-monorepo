@@ -5,6 +5,7 @@ using System.Text.Json;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
+using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -24,6 +25,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
     private readonly ISlackConnectionRepository _slackConnectionRepository;
     private readonly INotificationRepository _notificationRepository;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly SlackMessageBuilderFactory _builderFactory;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<SlackNotificationProcessorJob> _logger;
 
@@ -35,6 +37,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
         ISlackConnectionRepository slackConnectionRepository,
         INotificationRepository notificationRepository,
         IHttpClientFactory httpClientFactory,
+        SlackMessageBuilderFactory builderFactory,
         MeepleAiDbContext dbContext,
         ILogger<SlackNotificationProcessorJob> logger)
     {
@@ -42,6 +45,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
         _slackConnectionRepository = slackConnectionRepository ?? throw new ArgumentNullException(nameof(slackConnectionRepository));
         _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        _builderFactory = builderFactory ?? throw new ArgumentNullException(nameof(builderFactory));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -194,8 +198,9 @@ internal sealed class SlackNotificationProcessorJob : IJob
         var webhookUrl = item.SlackChannelTarget
             ?? throw new InvalidOperationException($"Missing webhook URL for SlackTeam item {item.Id}");
 
-        var messageText = FormatSimpleText(item);
-        var payload = JsonSerializer.Serialize(new { text = messageText });
+        var builder = _builderFactory.GetBuilder(item.NotificationType);
+        var message = builder.BuildMessage(item.Payload, null);
+        var payload = JsonSerializer.Serialize(message);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, webhookUrl)
         {
@@ -239,8 +244,15 @@ internal sealed class SlackNotificationProcessorJob : IJob
         if (string.IsNullOrEmpty(botToken))
             throw new InvalidOperationException($"No active bot token for item {item.Id}, user {item.RecipientUserId}");
 
-        var messageText = FormatSimpleText(item);
-        var payload = JsonSerializer.Serialize(new { channel = channelId, text = messageText });
+        var builder = _builderFactory.GetBuilder(item.NotificationType);
+        var blockKitMessage = builder.BuildMessage(item.Payload, null);
+        // Merge channel into the Block Kit message by serializing and re-parsing
+        var messageJson = JsonSerializer.Serialize(blockKitMessage);
+        using var mergedDoc = JsonDocument.Parse(messageJson);
+        var blocksElement = mergedDoc.RootElement.TryGetProperty("blocks", out var blocks) ? blocks : default;
+        var payload = blocksElement.ValueKind != JsonValueKind.Undefined
+            ? JsonSerializer.Serialize(new { channel = channelId, blocks = JsonSerializer.Deserialize<object>(blocksElement.GetRawText()) })
+            : JsonSerializer.Serialize(new { channel = channelId, text = messageJson });
 
         using var request = new HttpRequestMessage(HttpMethod.Post, SlackChatPostMessageUri)
         {
@@ -370,15 +382,6 @@ internal sealed class SlackNotificationProcessorJob : IJob
             _logger.LogError(updateEx, "Failed to update Slack notification {ItemId} status after failure", item.Id);
         }
 #pragma warning restore CA1031
-    }
-
-    /// <summary>
-    /// Formats a simple text message from the notification payload.
-    /// Block Kit message builders will be added in Task 16-18.
-    /// </summary>
-    private static string FormatSimpleText(NotificationQueueItem item)
-    {
-        return $"[{item.NotificationType}] {item.Payload}";
     }
 
     private static int ParseRetryAfter(RetryConditionHeaderValue? retryAfter)

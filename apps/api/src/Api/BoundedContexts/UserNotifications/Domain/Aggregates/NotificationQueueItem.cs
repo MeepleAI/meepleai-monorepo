@@ -44,7 +44,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         INotificationPayload payload,
         string? slackChannelTarget,
         string? slackTeamId,
-        Guid correlationId)
+        Guid correlationId,
+        DateTime? createdAt = null)
         : base(id)
     {
         ChannelType = channelType ?? throw new ArgumentNullException(nameof(channelType));
@@ -58,7 +59,7 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         MaxRetries = 3;
         NextRetryAt = null;
         LastError = null;
-        CreatedAt = DateTime.UtcNow;
+        CreatedAt = createdAt ?? DateTime.UtcNow;
         ProcessedAt = null;
         CorrelationId = correlationId;
     }
@@ -73,7 +74,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         INotificationPayload payload,
         string? slackChannelTarget = null,
         string? slackTeamId = null,
-        Guid? correlationId = null)
+        Guid? correlationId = null,
+        DateTime? createdAt = null)
     {
         return new NotificationQueueItem(
             Guid.NewGuid(),
@@ -83,7 +85,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
             payload,
             slackChannelTarget,
             slackTeamId,
-            correlationId ?? Guid.NewGuid());
+            correlationId ?? Guid.NewGuid(),
+            createdAt);
     }
 
     /// <summary>
@@ -125,7 +128,7 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         RetryCount++;
         LastError = errorMessage;
 
-        if (RetryCount >= MaxRetries)
+        if (RetryCount > MaxRetries)
         {
             MarkAsDeadLetter(errorMessage);
             return;

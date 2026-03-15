@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
@@ -5,6 +6,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Configuration;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -26,6 +28,7 @@ internal class SlackOAuthCallbackCommandHandler : ICommandHandler<SlackOAuthCall
     private readonly ISlackConnectionRepository _connectionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly SlackNotificationConfiguration _config;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<SlackOAuthCallbackCommandHandler> _logger;
 
     public SlackOAuthCallbackCommandHandler(
@@ -33,6 +36,7 @@ internal class SlackOAuthCallbackCommandHandler : ICommandHandler<SlackOAuthCall
         ISlackConnectionRepository connectionRepository,
         IUnitOfWork unitOfWork,
         IOptions<SlackNotificationConfiguration> config,
+        IDataProtectionProvider dataProtectionProvider,
         ILogger<SlackOAuthCallbackCommandHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);
@@ -43,6 +47,8 @@ internal class SlackOAuthCallbackCommandHandler : ICommandHandler<SlackOAuthCall
         _unitOfWork = unitOfWork;
         ArgumentNullException.ThrowIfNull(config);
         _config = config.Value;
+        ArgumentNullException.ThrowIfNull(dataProtectionProvider);
+        _dataProtectionProvider = dataProtectionProvider;
         ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
     }
@@ -51,9 +57,22 @@ internal class SlackOAuthCallbackCommandHandler : ICommandHandler<SlackOAuthCall
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (!Guid.TryParse(command.State, out var userId))
+        // Validate signed, time-limited CSRF state token
+        Guid userId;
+        try
         {
-            _logger.LogWarning("Invalid state parameter in Slack OAuth callback: {State}", command.State);
+            var protector = _dataProtectionProvider.CreateProtector("MeepleAI.SlackOAuth");
+            var timedProtector = protector.ToTimeLimitedDataProtector();
+            var userIdStr = timedProtector.Unprotect(command.State);
+            if (!Guid.TryParse(userIdStr, out userId))
+            {
+                _logger.LogWarning("Invalid user ID in OAuth state token");
+                return false;
+            }
+        }
+        catch (CryptographicException ex)
+        {
+            _logger.LogWarning(ex, "Invalid or expired OAuth state token");
             return false;
         }
 

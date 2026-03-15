@@ -9,9 +9,11 @@ using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.SystemConfiguration;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Infrastructure.Entities.UserNotifications;
+using Api.Infrastructure.EntityConfigurations.UserNotifications;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Pgvector; // Issue #3547: Value converter for float[] → Vector mapping
 
@@ -21,16 +23,19 @@ public class MeepleAiDbContext : DbContext
 {
     private readonly IMediator _mediator;
     private readonly IDomainEventCollector _eventCollector;
+    private readonly IDataProtectionProvider? _dataProtectionProvider;
     private readonly bool _isInMemoryDatabase;
 
     public MeepleAiDbContext(
         DbContextOptions<MeepleAiDbContext> options,
         IMediator mediator,
-        IDomainEventCollector eventCollector)
+        IDomainEventCollector eventCollector,
+        IDataProtectionProvider? dataProtectionProvider = null)
         : base(options)
     {
         _mediator = mediator;
         _eventCollector = eventCollector;
+        _dataProtectionProvider = dataProtectionProvider;
 
         // Issue #3578: Detect InMemory provider for unit tests
         // Check extensions to see if InMemory provider is being used
@@ -253,6 +258,16 @@ public class MeepleAiDbContext : DbContext
 
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);
+
+        // Apply encrypted entity configurations for Slack secrets (BotAccessToken, WebhookUrl)
+        // These override the parameterless configurations applied by assembly scanning
+        if (_dataProtectionProvider != null)
+        {
+            new SlackConnectionEntityConfiguration(_dataProtectionProvider)
+                .Configure(modelBuilder.Entity<SlackConnectionEntity>());
+            new SlackTeamChannelConfigEntityConfiguration(_dataProtectionProvider)
+                .Configure(modelBuilder.Entity<SlackTeamChannelConfigEntity>());
+        }
 
         // Issue #3578: Explicitly ignore Vector properties for InMemory database (unit tests)
         // Must be done AFTER ApplyConfigurationsFromAssembly to override the property configs

@@ -65,11 +65,12 @@ internal static class SlackIntegrationEndpoints
                 ? Results.Ok(new { message = "Slack connected successfully" })
                 : Results.BadRequest(new { error = "Failed to connect Slack" });
         })
+        .AllowAnonymous() // Slack redirects here without our auth; CSRF protection via signed time-limited state token (CRITICAL 2)
         .Produces<object>(200)
         .Produces<object>(400)
         .WithName("SlackOAuthCallback")
         .WithSummary("Handle Slack OAuth callback")
-        .WithDescription("Exchanges the OAuth authorization code for an access token and creates the Slack connection. Called by Slack after user authorization.");
+        .WithDescription("Exchanges the OAuth authorization code for an access token and creates the Slack connection. Called by Slack after user authorization. Anonymous because Slack redirects the browser without our session cookie; protected by signed state token.");
     }
 
     private static void MapDisconnectEndpoint(RouteGroupBuilder group)

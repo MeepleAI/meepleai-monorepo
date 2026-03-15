@@ -206,7 +206,7 @@ public class NotificationQueueItemTests
     }
 
     [Fact]
-    public void MarkAsFailed_ThirdFailure_DeadLetters()
+    public void MarkAsFailed_ThirdFailure_StillRetries()
     {
         // Arrange
         var item = CreateDefaultItem();
@@ -220,15 +220,47 @@ public class NotificationQueueItemTests
         item.MarkAsProcessing();
         item.MarkAsFailed("error 2", now.AddMinutes(2));
 
-        // Third failure — RetryCount reaches MaxRetries (3 >= 3)
+        // Third failure — RetryCount == MaxRetries (3 == 3), but off-by-one fix means one more retry
+        item.MarkAsProcessing();
+        var now3 = now.AddMinutes(10);
+        item.MarkAsFailed("error 3", now3);
+
+        // Assert — still retrying (4 total attempts: initial + 3 retries matching [1m, 5m, 30m] delays)
+        Assert.Equal(3, item.RetryCount);
+        Assert.Equal(NotificationQueueStatus.Failed, item.Status);
+        // Third failure uses last delay (30 minutes)
+        Assert.Equal(now3.AddMinutes(30), item.NextRetryAt);
+        Assert.Equal("error 3", item.LastError);
+    }
+
+    [Fact]
+    public void MarkAsFailed_FourthFailure_DeadLetters()
+    {
+        // Arrange
+        var item = CreateDefaultItem();
+        var now = new DateTime(2026, 3, 15, 12, 0, 0, DateTimeKind.Utc);
+
+        // First failure
+        item.MarkAsProcessing();
+        item.MarkAsFailed("error 1", now);
+
+        // Second failure
+        item.MarkAsProcessing();
+        item.MarkAsFailed("error 2", now.AddMinutes(2));
+
+        // Third failure
         item.MarkAsProcessing();
         item.MarkAsFailed("error 3", now.AddMinutes(10));
 
+        // Fourth failure — RetryCount > MaxRetries (4 > 3), dead-lettered
+        item.MarkAsProcessing();
+        item.MarkAsFailed("error 4", now.AddMinutes(40));
+
         // Assert
-        Assert.Equal(3, item.RetryCount);
+        Assert.Equal(4, item.RetryCount);
         Assert.Equal(NotificationQueueStatus.DeadLetter, item.Status);
         Assert.Null(item.NextRetryAt);
-        Assert.Equal("error 3", item.LastError);
+        Assert.Equal("error 4", item.LastError);
     }
 
     [Fact]

@@ -77,7 +77,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         // 3. Check Email channel
         try
         {
-            if (preferences != null && IsEmailEnabledForType(preferences, message.Type))
+            if (preferences == null || IsEmailEnabledForType(preferences, message.Type))
             {
                 var emailItem = NotificationQueueItem.Create(
                     channelType: NotificationChannelType.Email,

@@ -4,8 +4,10 @@ using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Scheduling;
+using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -47,11 +49,17 @@ public class SlackNotificationProcessorJobTests : IDisposable
 
     private SlackNotificationProcessorJob CreateSut()
     {
+        var configuration = new ConfigurationBuilder().Build();
+        var genericBuilder = new GenericSlackBuilder(configuration);
+        var builderFactory = new SlackMessageBuilderFactory(
+            Enumerable.Empty<ISlackMessageBuilder>(), genericBuilder);
+
         return new SlackNotificationProcessorJob(
             _queueRepoMock.Object,
             _slackConnRepoMock.Object,
             _notificationRepoMock.Object,
             _httpClientFactoryMock.Object,
+            builderFactory,
             _dbContext,
             _loggerMock.Object);
     }

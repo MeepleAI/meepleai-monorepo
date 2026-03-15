@@ -33,6 +33,15 @@ internal class SlackSignatureValidator
         if (string.IsNullOrEmpty(timestamp) || string.IsNullOrEmpty(signature))
             return false;
 
+        // Replay protection: reject requests older than 5 minutes
+        if (!long.TryParse(timestamp, System.Globalization.CultureInfo.InvariantCulture, out var ts))
+            return false;
+
+        var requestTime = DateTimeOffset.FromUnixTimeSeconds(ts);
+        var now = DateTimeOffset.UtcNow;
+        if (Math.Abs((now - requestTime).TotalSeconds) > 300)
+            return false;
+
         var baseString = $"v0:{timestamp}:{body}";
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_signingSecret));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(baseString));

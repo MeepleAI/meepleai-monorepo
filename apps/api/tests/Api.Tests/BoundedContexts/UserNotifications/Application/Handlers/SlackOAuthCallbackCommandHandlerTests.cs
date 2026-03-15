@@ -7,6 +7,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Configuration;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -22,6 +23,7 @@ public class SlackOAuthCallbackCommandHandlerTests
     private readonly Mock<ISlackConnectionRepository> _connectionRepoMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IOptions<SlackNotificationConfiguration>> _configMock;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly Mock<ILogger<SlackOAuthCallbackCommandHandler>> _loggerMock;
     private readonly Mock<HttpMessageHandler> _httpHandlerMock;
     private readonly SlackOAuthCallbackCommandHandler _handler;
@@ -31,6 +33,7 @@ public class SlackOAuthCallbackCommandHandlerTests
         _httpClientFactoryMock = new Mock<IHttpClientFactory>();
         _connectionRepoMock = new Mock<ISlackConnectionRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _dataProtectionProvider = DataProtectionProvider.Create("MeepleAI-Tests");
         _loggerMock = new Mock<ILogger<SlackOAuthCallbackCommandHandler>>();
 
         var config = new SlackNotificationConfiguration
@@ -51,7 +54,15 @@ public class SlackOAuthCallbackCommandHandlerTests
             _connectionRepoMock.Object,
             _unitOfWorkMock.Object,
             _configMock.Object,
+            _dataProtectionProvider,
             _loggerMock.Object);
+    }
+
+    private string CreateSignedState(Guid userId)
+    {
+        var protector = _dataProtectionProvider.CreateProtector("MeepleAI.SlackOAuth");
+        var timedProtector = protector.ToTimeLimitedDataProtector();
+        return timedProtector.Protect(userId.ToString(), TimeSpan.FromMinutes(10));
     }
 
     [Fact]
@@ -64,7 +75,7 @@ public class SlackOAuthCallbackCommandHandlerTests
             .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((SlackConnection?)null);
 
-        var command = new SlackOAuthCallbackCommand("valid-code", userId.ToString());
+        var command = new SlackOAuthCallbackCommand("valid-code", CreateSignedState(userId));
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -95,7 +106,7 @@ public class SlackOAuthCallbackCommandHandlerTests
             .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
-        var command = new SlackOAuthCallbackCommand("valid-code", userId.ToString());
+        var command = new SlackOAuthCallbackCommand("valid-code", CreateSignedState(userId));
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -110,8 +121,8 @@ public class SlackOAuthCallbackCommandHandlerTests
     [Fact]
     public async Task Handle_WithInvalidState_ReturnsFalse()
     {
-        // Arrange
-        var command = new SlackOAuthCallbackCommand("valid-code", "not-a-guid");
+        // Arrange — unsigned/tampered state token
+        var command = new SlackOAuthCallbackCommand("valid-code", "not-a-valid-token");
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -126,7 +137,7 @@ public class SlackOAuthCallbackCommandHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         SetupFailedTokenExchange();
-        var command = new SlackOAuthCallbackCommand("bad-code", userId.ToString());
+        var command = new SlackOAuthCallbackCommand("bad-code", CreateSignedState(userId));
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

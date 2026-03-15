@@ -30,7 +30,8 @@ internal sealed class SlackConnection : AggregateRoot<Guid>
         string slackTeamId,
         string slackTeamName,
         string botAccessToken,
-        string dmChannelId)
+        string dmChannelId,
+        DateTime? connectedAt = null)
         : base(id)
     {
         UserId = userId;
@@ -50,7 +51,7 @@ internal sealed class SlackConnection : AggregateRoot<Guid>
             ? dmChannelId
             : throw new ArgumentException("DM channel ID cannot be empty", nameof(dmChannelId));
         IsActive = true;
-        ConnectedAt = DateTime.UtcNow;
+        ConnectedAt = connectedAt ?? DateTime.UtcNow;
         DisconnectedAt = null;
     }
 
@@ -63,7 +64,8 @@ internal sealed class SlackConnection : AggregateRoot<Guid>
         string slackTeamId,
         string slackTeamName,
         string botAccessToken,
-        string dmChannelId)
+        string dmChannelId,
+        DateTime? connectedAt = null)
     {
         return new SlackConnection(
             Guid.NewGuid(),
@@ -72,7 +74,8 @@ internal sealed class SlackConnection : AggregateRoot<Guid>
             slackTeamId,
             slackTeamName,
             botAccessToken,
-            dmChannelId);
+            dmChannelId,
+            connectedAt);
     }
 
     /// <summary>
