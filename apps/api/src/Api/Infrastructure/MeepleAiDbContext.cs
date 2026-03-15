@@ -202,6 +202,11 @@ public class MeepleAiDbContext : DbContext
     // Issue #52: Email template admin management
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();
 
+    // Slack notification system: multi-channel queue, Slack connections, team channel configs
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.NotificationQueueEntity> NotificationQueueItems => Set<Api.Infrastructure.Entities.UserNotifications.NotificationQueueEntity>();
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.SlackConnectionEntity> SlackConnections => Set<Api.Infrastructure.Entities.UserNotifications.SlackConnectionEntity>();
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.SlackTeamChannelConfigEntity> SlackTeamChannelConfigs => Set<Api.Infrastructure.Entities.UserNotifications.SlackTeamChannelConfigEntity>();
+
     // Issue #276/#278: Session diary events and checkpoints
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity> SessionEvents => Set<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity>();
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionCheckpointEntity> SessionCheckpoints => Set<Api.Infrastructure.Entities.SessionTracking.SessionCheckpointEntity>();
@@ -270,6 +275,8 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameStateSnapshot>(); // ISSUE-2403
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RuleConflictFAQ>(); // ISSUE-3761
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.Notification>(); // ISSUE-2053
+        modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.NotificationQueueItem>(); // Slack notification queue
+        modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.SlackConnection>(); // Slack connection aggregate
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecord>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888

@@ -109,4 +109,29 @@ internal sealed class SlackConnection : AggregateRoot<Guid>
     {
         IsActive = false;
     }
+
+    /// <summary>
+    /// Reconstitutes the aggregate from persistence.
+    /// Used by repository when mapping from database entity.
+    /// </summary>
+    internal static SlackConnection Reconstitute(
+        Guid id,
+        Guid userId,
+        string slackUserId,
+        string slackTeamId,
+        string slackTeamName,
+        string botAccessToken,
+        string dmChannelId,
+        bool isActive,
+        DateTime connectedAt,
+        DateTime? disconnectedAt)
+    {
+        var connection = new SlackConnection(
+            id, userId, slackUserId, slackTeamId,
+            slackTeamName, botAccessToken, dmChannelId);
+        connection.IsActive = isActive;
+        connection.ConnectedAt = connectedAt;
+        connection.DisconnectedAt = disconnectedAt;
+        return connection;
+    }
 }
