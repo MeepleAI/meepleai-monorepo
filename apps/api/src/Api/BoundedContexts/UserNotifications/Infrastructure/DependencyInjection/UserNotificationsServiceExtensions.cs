@@ -37,6 +37,9 @@ internal static class UserNotificationsServiceExtensions
         services.AddScoped<INotificationQueueRepository, NotificationQueueRepository>(); // Slack notification queue
         services.AddScoped<ISlackConnectionRepository, SlackConnectionRepository>(); // Slack connections
 
+        // Slack signature validation
+        services.AddSingleton<SlackSignatureValidator>();
+
         // Slack Block Kit message builders
         services.AddSingleton<GenericSlackBuilder>();
         services.AddSingleton<ISlackMessageBuilder, ShareRequestSlackBuilder>();

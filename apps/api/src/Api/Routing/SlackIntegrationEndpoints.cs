@@ -22,6 +22,7 @@ internal static class SlackIntegrationEndpoints
         MapCallbackEndpoint(slackGroup);
         MapDisconnectEndpoint(slackGroup);
         MapStatusEndpoint(slackGroup);
+        MapInteractionsEndpoint(slackGroup);
         MapUpdatePreferencesEndpoint(group);
 
         return group;
@@ -118,6 +119,37 @@ internal static class SlackIntegrationEndpoints
         .WithName("GetSlackConnectionStatus")
         .WithSummary("Get Slack connection status")
         .WithDescription("Returns the current Slack connection status for the authenticated user.");
+    }
+
+    private static void MapInteractionsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/interactions", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            // Read the raw body for signature validation
+            context.Request.EnableBuffering();
+            using var reader = new StreamReader(context.Request.Body);
+            var body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+            var timestamp = context.Request.Headers["X-Slack-Request-Timestamp"].ToString();
+            var signature = context.Request.Headers["X-Slack-Signature"].ToString();
+
+            // Slack sends interactions as form-encoded with a "payload" field
+            var formData = System.Web.HttpUtility.ParseQueryString(body);
+            var payload = formData["payload"] ?? body;
+
+            var command = new HandleSlackInteractionCommand(payload, timestamp, signature);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Ok(new { text = result.ResponseMessage ?? "OK" });
+        })
+        .AllowAnonymous() // Slack webhooks don't have our auth tokens; validated via HMAC signature
+        .Produces<object>(200)
+        .WithName("HandleSlackInteraction")
+        .WithSummary("Handle Slack interactivity webhook")
+        .WithDescription("Receives and processes Slack interaction payloads (button clicks, menu selections). Validates HMAC-SHA256 signature and dispatches the appropriate MediatR command.");
     }
 
     private static void MapUpdatePreferencesEndpoint(RouteGroupBuilder group)
