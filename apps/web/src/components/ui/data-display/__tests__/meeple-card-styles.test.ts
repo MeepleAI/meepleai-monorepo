@@ -48,7 +48,7 @@ describe('entityColors', () => {
   });
 
   it('all HSL values are unique', () => {
-    const hslValues = EXPECTED_ENTITY_TYPES.map((t) => entityColors[t].hsl);
+    const hslValues = EXPECTED_ENTITY_TYPES.map(t => entityColors[t].hsl);
     const uniqueValues = new Set(hslValues);
     expect(uniqueValues.size).toBe(hslValues.length);
   });
