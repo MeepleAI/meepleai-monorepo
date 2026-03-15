@@ -31,6 +31,12 @@ public record AskAgentQuestionCommand : IRequest<AgentChatResponse>
     public Guid? GameId { get; init; }
 
     /// <summary>
+    /// Optional: User ID for content-gating (ownership check).
+    /// When provided, non-owners see reference-only sources (no text/images).
+    /// </summary>
+    public Guid? UserId { get; init; }
+
+    /// <summary>
     /// Optional: Live game session ID for session-aware RAG filtering.
     /// When provided, vector search filters by all game IDs from the session context
     /// (primary game + expansions) instead of a single GameId.
@@ -52,11 +58,6 @@ public record AskAgentQuestionCommand : IRequest<AgentChatResponse>
     /// Minimum relevance score threshold (0-1)
     /// </summary>
     public double MinScore { get; init; } = 0.6;
-
-    /// <summary>
-    /// Authenticated user ID (for RAG access enforcement).
-    /// </summary>
-    public Guid? UserId { get; init; }
 
     /// <summary>
     /// Authenticated user role string (for RAG access enforcement).

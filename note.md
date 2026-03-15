@@ -1,9 +1,24 @@
 ## Comandi
 
+in [session/new](https://meepleai.app/sessions/new) c'e' un pop
+
+## Template
+
+/using-superpowers ultrathink /sc:spec-panel
+Riflettiamo sulla seguente user story:
+Esploriamo questa idea.
+Solo un test sul browser valida l'implementazione della US.
+
 ### User story
 
 /using-superpowers ultrathink /sc:spec-panel riflettiamo sulla seguente user story:
-sono un admin e voglio provare un gioco che ho acquistato e che ho il pdf, voglio testare il processo di embeeding e come funziona l'agente usando il rag che gli ho fornito con il kb creato
+sono un user, aggiungio un gioco presente alla shared library alla mia collezzione, seleziono di possederlo, dopo aver visto un popup che mi spiega cosa comporta dichiarare di possederlo,
+aggiungo il gioco alla mia libreria. Il RAG e' utilizzabile, possedendo il gioco (possiamo usare i RAG relativi al gioco), l'user crea un agente tutor e avvia una chat
+Per validare dobbiamo fare un test locale sul browser della US
+
+/using-superpowers ultrathink /sc:spec-panel riflettiamo sulla seguente user story:
+sono un admin e voglio provare un gioco che ho acquistato e che ho il pdf, voglio testare il processo di embeeding e come funziona l'agente usando il rag che gli ho fornito con il kb creato. dopo l'upload, voglio andare nella pagina admin per visualizzare le code di embeeding .
+Solo un test sul browser valida l'implementazione della US
 
 /superpowers:using-superpowers ultrathink /sc:spec-panel riflettiamo sulla seguente user story, analizziamo le open issue e creiamo sequenza di issue da implementare (gia' aperte o nuove) legata a una epic per la seguente user story:
 
@@ -18,6 +33,7 @@ Cambia password e accede con la nuova password. Aggiunge un gioco alla collezzio
 Chiede all'agente a voce di descriverli lo scopo del gioco e una descrizione di un turno di gioco
 Admin puo' cambiare il ruolo di utenti e visualizzare log relativi.
 Controlla le open issue per non creare issue doppie. Prepara roadmap per implementazione
+Solo un test sul browser valida l'implementazione della US
 
 /using-superpowers ultrathink /sc:spec-panel analizziamo l'idea di toolbox. Un toolbox rappresenta un contenitore che puo' essere diverso gioco da gioco. Ci sono giochi che richiedono un semplice segnapunti e il tiro di dadi, altri con complesse fasi/turni e sistemi di punTEGGIO. potremmo usare deck di poker per estrarre una carta o mazzi con carte specializzate. E altre funzioni utili con un certo gioco.,
 
@@ -34,9 +50,15 @@ Controlla quanto e’ gia’ pronto e le issue aperte per determinare una roadma
 /using-superpowers ultrathink /sc:spec-panel analizziamo questa user story, creiamo epic con issue
 create e issue aperte per completare la user story.
 Admin vuole aggiungere un gioco alla lista shared games. Crea gioco -> Cerca Descent (ha un pdf in data/rulebooks)
-->carica pdf di descent,visualizza il progresso di embeeding,Salva il gioco . esegue un test di chat con il rag
+->carica pdf di descent,visualizza il progresso di embeeding,Salva il gioco . 2esegue un test di chat con il rag
 -Db versione 0
 /superpowers:using-superpowers ultrathink /sc:spec-panel analizza le issue, ci sono issue che richiedono la modifica allo schema/tabelle del db? voglio partire da una versione beta del database, rimuovendo i dati e le migrationi, partendo da una versione 0
+
+### UX
+
+/using-superpowers ultrathink /sc:spec-panel miglioriamo la UX. Su smartphone la grandezza della singola meeple card dovrebbe occupare quasi l'intero schermo, quando in focus.
+Cambiando la visualizzazione a lista/griglia, una versione media della meeple card.
+Non ci devono esser troppi "scroll" da fare, ma navigare velocemente tra elementi di domini differenti e pagine
 
 ### -CI
 
@@ -46,9 +68,13 @@ Admin vuole aggiungere un gioco alla lista shared games. Crea gioco -> Cerca Des
 analizza i piani e, se ne trovi controllane uno alla volta. se e' stato implementato o le issue sono state create e chiuse eliminalo.  
 se qualcosa manca, fermati e parliamone.
 
-### - Issue
+## - Issue
 
-/using-superpowers ultrathink /sc:pm analizza le open issue e prepara roadmap per la risoluzione, la parte sul publisher e sul training ai sono a bassa priorita'
+/using-superpowers ultrathink fai uno screenshot sulla pagina /discover
+in modalita' smartphone
+
+/using-superpowers ultrathink /sc:spec-panel analizza le issue, ci sono issue che richiedono la
+/sc:pm analizza le open issue e prepara roadmap per la risoluzione, la parte sul publisher e sul training ai sono a bassa priorita'
 
 ## Meeple Card
 
@@ -57,3 +83,9 @@ Bisogna decidere :
 
 - info da visualizzare (label, link,etc...), -azioni a livello card -azioni "veloci" -navigazione a un altra card
   -ci sono altre cose da poter inserire nella card? lo scopo e' far avere a portata azioni e collegamenti con un tipo di card verso altri tipi, collegati
+
+  /superpowers:using-superpowers ultrathink /sc:spec-panel cerchiamo gap tra backend e frontend
+
+### Dashboard
+
+/superpowers:using-superpowers ultrathink /sc:spec-panel lavoriamo sulla dashboard. un utente nuovo logga per la prima volta,dopo che si e' registrato (oauth, registrato da solo o invito da email).
