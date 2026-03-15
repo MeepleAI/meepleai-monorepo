@@ -4,6 +4,7 @@ using Api.BoundedContexts.UserNotifications.Infrastructure.Configuration;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Scheduling;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
+using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,15 @@ internal static class UserNotificationsServiceExtensions
         services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>(); // Issue #52: Email template admin management
         services.AddScoped<INotificationQueueRepository, NotificationQueueRepository>(); // Slack notification queue
         services.AddScoped<ISlackConnectionRepository, SlackConnectionRepository>(); // Slack connections
+
+        // Slack Block Kit message builders
+        services.AddSingleton<GenericSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, ShareRequestSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, GameNightSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, PdfProcessingSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, BadgeSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, AdminAlertSlackBuilder>();
+        services.AddSingleton<SlackMessageBuilderFactory>();
 
         // Register services
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>(); // Multi-channel dispatch
