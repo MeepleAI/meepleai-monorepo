@@ -104,6 +104,20 @@ internal static class UserNotificationsServiceExtensions
                 .WithDescription("Processes queued emails with retry and dead letter handling"));
         });
 
+        // Slack notification processor job - every 10 seconds
+        services.AddQuartz(q =>
+        {
+            q.AddJob<SlackNotificationProcessorJob>(opts => opts
+                .WithIdentity("slack-notification-processor-job", "notifications")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("slack-notification-processor-job", "notifications")
+                .WithIdentity("slack-notification-processor-trigger", "notifications")
+                .WithCronSchedule("0/10 * * * * ?")
+                .WithDescription("Processes queued Slack notifications with rate limiting"));
+        });
+
         // ISSUE-40: Dead letter monitor job - hourly
         services.AddQuartz(q =>
         {
