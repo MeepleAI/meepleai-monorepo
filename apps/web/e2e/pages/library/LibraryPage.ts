@@ -8,7 +8,8 @@ export class LibraryPage extends BasePage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/library');
+    // Navigate to private games tab where "Add Game" button exists
+    await this.page.goto('/library?tab=private');
     await this.waitForLoad();
   }
 

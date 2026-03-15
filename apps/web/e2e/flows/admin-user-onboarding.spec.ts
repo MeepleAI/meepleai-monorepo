@@ -237,7 +237,7 @@ test.describe('Admin-User Onboarding Flow', () => {
       });
 
       // Navigate to /library with a fresh load (applies localStorage change)
-      await page.goto('/library', { waitUntil: 'networkidle' });
+      await page.goto('/library?tab=private', { waitUntil: 'networkidle' });
 
       // Cookie consent blocks interactions — dismiss then reload
       const cookieBtn5 = page.getByRole('button', { name: /essential only|accept all/i });
@@ -252,9 +252,23 @@ test.describe('Admin-User Onboarding Flow', () => {
         await page.reload({ waitUntil: 'networkidle' });
       }
       await page.waitForTimeout(1000);
+
+      // Debug: check cookies and admin toggle
+      const cookies = await page.context().cookies();
+      const sessionCookies = cookies.filter(
+        c => c.name.includes('session') || c.name.includes('auth') || c.name.includes('token'),
+      );
+      console.log(`[DEBUG T5] Session cookies: ${JSON.stringify(sessionCookies.map(c => c.name))}`);
+      const toggleVisible = await page
+        .locator('[aria-label*="user mode"], [aria-label*="admin mode"]')
+        .isVisible()
+        .catch(() => false);
+      console.log(`[DEBUG T5] Admin toggle visible: ${toggleVisible}, URL: ${page.url()}`);
     });
 
     await test.step('Search and add game', async () => {
+      // Screenshot just before clicking add game
+      await page.screenshot({ path: 'test-results/debug-t5-before-add.png', fullPage: true });
       await libraryPage.clickAddGame();
       await libraryPage.selectFromCatalog();
       await libraryPage.searchGame(env.seedGameName);
