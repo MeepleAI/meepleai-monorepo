@@ -55,7 +55,11 @@ function resolveEnvironment(): OnboardingEnvironment {
           e2eSecret['E2E_ADMIN_EMAIL'] ??
           adminSecret['ADMIN_EMAIL'] ??
           'admin@meepleai.app',
-        password: process.env.E2E_ADMIN_PASSWORD ?? adminSecret['ADMIN_PASSWORD'] ?? 'changeme',
+        password:
+          process.env.E2E_ADMIN_PASSWORD ??
+          e2eSecret['E2E_ADMIN_PASSWORD'] ??
+          adminSecret['ADMIN_PASSWORD'] ??
+          'changeme',
       },
       email: {
         strategy: 'mailosaur',

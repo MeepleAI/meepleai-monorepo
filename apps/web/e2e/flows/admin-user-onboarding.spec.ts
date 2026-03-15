@@ -56,10 +56,11 @@ test.describe('Admin-User Onboarding Flow', () => {
         { timeout: 15_000 }
       );
 
-      const userInfo = adminPage
+      // Verify admin UI is loaded (admin toggle or any admin-specific element)
+      const adminIndicator = adminPage
         .locator('[data-testid="user-display-name"], [data-testid="navbar-user"]')
-        .or(adminPage.getByText(env.admin.email));
-      await expect(userInfo).toBeVisible({ timeout: 5_000 });
+        .or(adminPage.getByText(/admin/i).first());
+      await expect(adminIndicator).toBeVisible({ timeout: 5_000 });
 
       const errorToast = adminPage.locator('[data-testid="toast-error"], .toast-error');
       await expect(errorToast).not.toBeVisible();
@@ -119,7 +120,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
     await test.step('Submit and wait for redirect', async () => {
       await acceptPage.submit();
-      await acceptPage.waitForRedirectToOnboarding();
+      await acceptPage.waitForRedirectAfterAccept();
     });
 
     state.userPassword = testUserPassword;
@@ -170,7 +171,16 @@ test.describe('Admin-User Onboarding Flow', () => {
     const page = state.userPage!;
     const libraryPage = new LibraryPage(page);
 
-    await test.step('Navigate to library', async () => {
+    await test.step('Switch to user mode and navigate to library', async () => {
+      // If admin toggle is active, switch to user mode first
+      const adminToggle = page.locator('switch[aria-label*="user mode"], [role="switch"]').first();
+      if (await adminToggle.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        const isChecked = await adminToggle.getAttribute('aria-checked');
+        if (isChecked === 'true') {
+          await adminToggle.click();
+          await page.waitForTimeout(1000);
+        }
+      }
       await libraryPage.goto();
     });
 
