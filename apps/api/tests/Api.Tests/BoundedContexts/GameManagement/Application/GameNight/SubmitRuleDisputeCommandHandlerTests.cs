@@ -121,10 +121,12 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
 
     private static SubmitRuleDisputeCommand BuildCommand(
         Guid? sessionId = null,
+        Guid? callerUserId = null,
         string description = "Posso giocare 2 carte per turno?",
         string player = "Alice")
         => new(
             SessionId: sessionId ?? TestSessionId,
+            CallerUserId: callerUserId ?? TestUserId,
             Description: description,
             RaisedByPlayerName: player);
 
@@ -483,7 +485,7 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithValidCommand_Passes()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), "Posso giocare 2 carte?", "Alice");
+            Guid.NewGuid(), Guid.NewGuid(), "Posso giocare 2 carte?", "Alice");
         _validator.TestValidate(command).ShouldNotHaveAnyValidationErrors();
     }
 
@@ -491,15 +493,23 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithEmptySessionId_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.Empty, "Description", "Player");
+            Guid.Empty, Guid.NewGuid(), "Description", "Player");
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.SessionId);
+    }
+
+    [Fact]
+    public void Validate_WithEmptyCallerUserId_Fails()
+    {
+        var command = new SubmitRuleDisputeCommand(
+            Guid.NewGuid(), Guid.Empty, "Description", "Player");
+        _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.CallerUserId);
     }
 
     [Fact]
     public void Validate_WithEmptyDescription_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), string.Empty, "Player");
+            Guid.NewGuid(), Guid.NewGuid(), string.Empty, "Player");
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.Description);
     }
 
@@ -507,7 +517,7 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithDescriptionExceeding1000Chars_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), new string('A', 1001), "Player");
+            Guid.NewGuid(), Guid.NewGuid(), new string('A', 1001), "Player");
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.Description);
     }
 
@@ -515,7 +525,7 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithEmptyPlayerName_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), "Description", string.Empty);
+            Guid.NewGuid(), Guid.NewGuid(), "Description", string.Empty);
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.RaisedByPlayerName);
     }
 
@@ -523,16 +533,17 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithPlayerNameExceeding100Chars_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), "Description", new string('B', 101));
+            Guid.NewGuid(), Guid.NewGuid(), "Description", new string('B', 101));
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.RaisedByPlayerName);
     }
 
     [Fact]
     public void Validate_WithAllFieldsEmpty_FailsAllFields()
     {
-        var command = new SubmitRuleDisputeCommand(Guid.Empty, string.Empty, string.Empty);
+        var command = new SubmitRuleDisputeCommand(Guid.Empty, Guid.Empty, string.Empty, string.Empty);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.SessionId);
+        result.ShouldHaveValidationErrorFor(x => x.CallerUserId);
         result.ShouldHaveValidationErrorFor(x => x.Description);
         result.ShouldHaveValidationErrorFor(x => x.RaisedByPlayerName);
     }

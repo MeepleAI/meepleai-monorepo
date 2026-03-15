@@ -397,7 +397,7 @@ export function createLiveSessionsClient({
 
     async createPauseSnapshot(sessionId) {
       const response = await httpClient.post<CreatePauseSnapshotResponse>(
-        `${GAME_NIGHT_BASE}/sessions/${encodeURIComponent(sessionId)}/pause-snapshot`,
+        `${GAME_NIGHT_BASE}/sessions/${encodeURIComponent(sessionId)}/save`,
         {}
       );
       if (!response) throw new Error('Pause snapshot creation failed');

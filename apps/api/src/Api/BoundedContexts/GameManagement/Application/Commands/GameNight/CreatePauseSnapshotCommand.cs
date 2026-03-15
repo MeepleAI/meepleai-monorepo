@@ -9,6 +9,7 @@ using Api.Middleware.Exceptions;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 
@@ -85,7 +86,14 @@ internal sealed class CreatePauseSnapshotCommandHandler
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", request.SessionId.ToString());
 
-        // 2. Verify session is InProgress
+        // 2. Authorization: only the session host/creator can pause the session
+        if (session.CreatedByUserId != request.SavedByUserId)
+        {
+            throw new ForbiddenException(
+                "Only the session host can save and pause the session.");
+        }
+
+        // 3. Verify session is InProgress
         if (session.Status != LiveSessionStatus.InProgress)
         {
             throw new ConflictException(

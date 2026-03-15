@@ -149,10 +149,14 @@ internal static class GameNightImprovvisataEndpoints
         Guid sessionId,
         [FromBody] SubmitRuleDisputeRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        var userId = httpContext.User.GetUserId();
+
         var command = new SubmitRuleDisputeCommand(
             SessionId: sessionId,
+            CallerUserId: userId,
             Description: request.Description,
             RaisedByPlayerName: request.RaisedByPlayerName);
 

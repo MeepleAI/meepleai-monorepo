@@ -11,6 +11,7 @@ using Api.Services;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 
@@ -23,6 +24,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 /// </summary>
 public sealed record SubmitRuleDisputeCommand(
     Guid SessionId,
+    Guid CallerUserId,
     string Description,
     string RaisedByPlayerName) : IRequest<RuleDisputeResponse>;
 
@@ -45,6 +47,10 @@ public sealed class SubmitRuleDisputeCommandValidator : AbstractValidator<Submit
         RuleFor(x => x.SessionId)
             .NotEmpty()
             .WithMessage("Session ID is required");
+
+        RuleFor(x => x.CallerUserId)
+            .NotEmpty()
+            .WithMessage("Caller user ID is required");
 
         RuleFor(x => x.Description)
             .NotEmpty()
@@ -116,7 +122,16 @@ internal sealed class SubmitRuleDisputeCommandHandler
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", request.SessionId.ToString());
 
-        // 2. Verify session is InProgress
+        // 2. Authorization: caller must be the host or an active participant
+        var isHost = session.CreatedByUserId == request.CallerUserId;
+        var isParticipant = session.Players.Any(p => p.UserId == request.CallerUserId && p.IsActive);
+        if (!isHost && !isParticipant)
+        {
+            throw new ForbiddenException(
+                "You must be a participant or host of this session to submit a rule dispute.");
+        }
+
+        // 3. Verify session is InProgress
         if (session.Status != LiveSessionStatus.InProgress)
         {
             throw new ConflictException(
