@@ -290,6 +290,9 @@ export const GameDetailDtoSchema = z.object({
   winRate: z.string().nullable(),
   avgDuration: z.string().nullable(),
 
+  // RAG access
+  hasRagAccess: z.boolean().optional().default(false),
+
   // Optional extended data
   recentSessions: z.array(LibraryGameSessionSchema).nullable().optional(),
   checklist: z.array(LibraryChecklistItemSchema).nullable().optional(),

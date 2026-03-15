@@ -1,12 +1,10 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
-using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Middleware;
-using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -97,7 +95,6 @@ internal static class ChatSessionEndpoints
     private static async Task<IResult> HandleCreateSession(
         [FromBody] CreateChatSessionRequest request,
         [FromServices] IMediator mediator,
-        [FromServices] IRagAccessService ragAccessService,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -109,15 +106,6 @@ internal static class ChatSessionEndpoints
         if (authenticated && session?.User != null)
             tierLimit = ChatSessionTierLimits.GetLimit(session.User.Tier, session.User.Role);
 
-        // RAG access enforcement: check ownership before creating chat session
-        var userRole = Enum.TryParse<UserRole>(session?.User?.Role, ignoreCase: true, out var parsedRole)
-            ? parsedRole
-            : UserRole.User;
-        var canAccess = await ragAccessService.CanAccessRagAsync(
-            userId, request.GameId, userRole, cancellationToken).ConfigureAwait(false);
-        if (!canAccess)
-            throw new ForbiddenException("Accesso RAG non autorizzato");
-
         var command = new CreateChatSessionCommand(
             UserId: userId,
             GameId: request.GameId,
@@ -128,7 +116,8 @@ internal static class ChatSessionEndpoints
             AgentId: request.AgentId,
             AgentType: request.AgentType,
             AgentName: request.AgentName,
-            TierLimit: tierLimit
+            TierLimit: tierLimit,
+            UserRole: session?.User?.Role
         );
 
         var sessionId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);

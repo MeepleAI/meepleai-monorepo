@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -26,6 +27,7 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
     private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<AskArbiterCommandHandler> _logger;
 
     /// <summary>
@@ -39,6 +41,7 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
         IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         MeepleAiDbContext dbContext,
+        IRagAccessService ragAccessService,
         ILogger<AskArbiterCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -46,6 +49,7 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
         _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -65,6 +69,16 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
         if (agent == null)
         {
             throw new NotFoundException("Agent", command.AgentId.ToString());
+        }
+
+        // RAG access enforcement: resolve agent's game and check access
+        if (agent.GameId is not null && agent.GameId != Guid.Empty)
+        {
+            var userRole = UserRole.User; // AskArbiterCommand doesn't carry UserRole; default to User
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                command.UserId, agent.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
         // 2. Load agent configuration and selected documents

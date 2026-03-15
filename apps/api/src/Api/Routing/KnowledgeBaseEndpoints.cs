@@ -5,12 +5,10 @@ using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
-using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
 using Api.Middleware;
-using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -211,7 +209,6 @@ internal static class KnowledgeBaseEndpoints
         KnowledgeBaseSearchRequest req,
         HttpContext context,
         IMediator mediator,
-        [FromServices] IRagAccessService ragAccessService,
         ILogger<Program> logger,
         CancellationToken ct)
     {
@@ -228,14 +225,6 @@ internal static class KnowledgeBaseEndpoints
             return Results.BadRequest(new { error = queryError });
         }
 
-        // RAG access enforcement
-        var userRole = Enum.TryParse<UserRole>(session!.User!.Role, ignoreCase: true, out var parsedRole)
-            ? parsedRole : UserRole.User;
-        var canAccess = await ragAccessService.CanAccessRagAsync(
-            session.User!.Id, gameId, userRole, ct).ConfigureAwait(false);
-        if (!canAccess)
-            throw new ForbiddenException("Accesso RAG non autorizzato");
-
         logger.LogInformation(
             "KnowledgeBase search request from user {UserId} for game {GameId}: {Query}",
             session!.User!.Id, gameId, req.query);
@@ -246,7 +235,9 @@ internal static class KnowledgeBaseEndpoints
             TopK: req.topK ?? 5,
             MinScore: req.minScore ?? 0.55,
             SearchMode: req.searchMode ?? "hybrid",
-            Language: req.language ?? "en"
+            Language: req.language ?? "en",
+            UserId: session!.User!.Id,
+            UserRole: session.User!.Role
         );
 
         var results = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -268,7 +259,6 @@ internal static class KnowledgeBaseEndpoints
         KnowledgeBaseAskRequest req,
         HttpContext context,
         IMediator mediator,
-        [FromServices] IRagAccessService ragAccessService,
         ILogger<Program> logger,
         CancellationToken ct)
     {
@@ -291,14 +281,6 @@ internal static class KnowledgeBaseEndpoints
             return Results.BadRequest(new { error = queryError });
         }
 
-        // RAG access enforcement
-        var userRole = Enum.TryParse<UserRole>(session!.User!.Role, ignoreCase: true, out var parsedRole)
-            ? parsedRole : UserRole.User;
-        var canAccess = await ragAccessService.CanAccessRagAsync(
-            session.User!.Id, gameId, userRole, ct).ConfigureAwait(false);
-        if (!canAccess)
-            throw new ForbiddenException("Accesso RAG non autorizzato");
-
         logger.LogInformation(
             "[KnowledgeBase.Ask] Q&A request from user {UserId} for game {GameId}: {Query}",
             session!.User!.Id, gameId, req.query);
@@ -307,7 +289,9 @@ internal static class KnowledgeBaseEndpoints
             GameId: gameId,
             Question: req.query!,  // Already validated by QueryValidator above
             Language: req.language ?? "en",
-            BypassCache: req.bypassCache ?? false
+            BypassCache: req.bypassCache ?? false,
+            UserId: session!.User!.Id,
+            UserRole: session.User!.Role
         );
 
         logger.LogDebug("[KnowledgeBase.Ask] Sending AskQuestionQuery to mediator...");
@@ -476,23 +460,11 @@ internal static class KnowledgeBaseEndpoints
         CreateChatThreadRequest req,
         HttpContext context,
         IMediator mediator,
-        [FromServices] IRagAccessService ragAccessService,
         ILogger<Program> logger,
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session!.User!.Id;
-
-        // RAG access enforcement: check game access if GameId provided
-        if (req.GameId.HasValue)
-        {
-            var userRole = Enum.TryParse<UserRole>(session.User!.Role, ignoreCase: true, out var parsedRole)
-                ? parsedRole : UserRole.User;
-            var canAccess = await ragAccessService.CanAccessRagAsync(
-                userId, req.GameId.Value, userRole, ct).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
-        }
 
         logger.LogInformation("Creating chat thread for user {UserId}, game {GameId}", userId, req.GameId);
 
@@ -502,7 +474,8 @@ internal static class KnowledgeBaseEndpoints
             Title: req.Title,
             InitialMessage: req.InitialMessage,
             AgentId: req.AgentId,
-            AgentType: req.AgentType // Issue #4362
+            AgentType: req.AgentType, // Issue #4362
+            UserRole: session.User!.Role
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

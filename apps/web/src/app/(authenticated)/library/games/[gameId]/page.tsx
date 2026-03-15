@@ -44,9 +44,8 @@ export default function LibraryGameDetailPage() {
   const queryClient = useQueryClient();
   const { data: gameDetail, isLoading, error } = useLibraryGameDetail(gameId);
 
-  // Derive RAG access from ownership state (Owned/InPrestito = access granted via migration backfill)
-  const hasRagAccess =
-    gameDetail?.currentState === 'Owned' || gameDetail?.currentState === 'InPrestito';
+  // Use API-provided RAG access flag (accounts for ownership, admin role, and RAG-public games)
+  const hasRagAccess = gameDetail?.hasRagAccess ?? false;
 
   const handleOwnershipDeclared = () => {
     queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
