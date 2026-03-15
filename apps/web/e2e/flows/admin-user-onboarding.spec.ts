@@ -190,7 +190,22 @@ test.describe('Admin-User Onboarding Flow', () => {
       });
     });
 
-    await test.step('Capture user ID', async () => {
+    await test.step('Reset UI context and capture user ID', async () => {
+      // Ensure user mode (not admin) — clear persisted admin context from localStorage
+      await page.evaluate(() => {
+        const key = 'meeple-card-stack-expanded';
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          try {
+            const data = JSON.parse(stored);
+            if (data.state) data.state.context = 'user';
+            localStorage.setItem(key, JSON.stringify(data));
+          } catch {
+            /* ignore */
+          }
+        }
+      });
+
       const meResponse = await page.request.get(`${env.apiURL}/api/v1/auth/me`);
       if (meResponse.ok()) {
         const meData = await meResponse.json();
