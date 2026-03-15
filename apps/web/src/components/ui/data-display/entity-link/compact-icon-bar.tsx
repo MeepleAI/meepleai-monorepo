@@ -1,6 +1,5 @@
 'use client';
 
-import type { LucideIcon } from 'lucide-react';
 import {
   Bot,
   Calendar,
@@ -12,10 +11,11 @@ import {
   Wrench,
 } from 'lucide-react';
 
+import { CompactIconButton } from './compact-icon-button';
+
 import type { LinkEntityType } from './entity-link-types';
 import type { EntityLinkGroup } from './use-entity-link-groups';
-
-import { CompactIconButton } from './compact-icon-button';
+import type { LucideIcon } from 'lucide-react';
 
 const ENTITY_ICON_CONFIG: Record<
   string,
@@ -42,7 +42,7 @@ export function CompactIconBar({ groups, onIconClick, className }: CompactIconBa
   if (groups.length === 0) return null;
 
   const sorted = [...groups]
-    .filter((g) => ENTITY_ICON_CONFIG[g.entityType])
+    .filter(g => ENTITY_ICON_CONFIG[g.entityType])
     .sort((a, b) => {
       const ga = ENTITY_ICON_CONFIG[a.entityType]?.group ?? 99;
       const gb = ENTITY_ICON_CONFIG[b.entityType]?.group ?? 99;
