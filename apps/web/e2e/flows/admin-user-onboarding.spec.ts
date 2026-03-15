@@ -171,21 +171,14 @@ test.describe('Admin-User Onboarding Flow', () => {
     const page = state.userPage!;
     const libraryPage = new LibraryPage(page);
 
-    await test.step('Switch to user mode and navigate to library', async () => {
-      // If admin toggle is active, switch to user mode first
-      const adminToggle = page.locator('switch[aria-label*="user mode"], [role="switch"]').first();
-      if (await adminToggle.isVisible({ timeout: 2_000 }).catch(() => false)) {
-        const isChecked = await adminToggle.getAttribute('aria-checked');
-        if (isChecked === 'true') {
-          await adminToggle.click();
-          await page.waitForTimeout(1000);
-        }
-      }
-      await libraryPage.goto();
+    await test.step('Navigate to library', async () => {
+      await page.goto('/library');
+      await page.waitForLoadState('domcontentloaded');
     });
 
     await test.step('Search and add game', async () => {
       await libraryPage.clickAddGame();
+      await libraryPage.selectFromCatalog();
       await libraryPage.searchGame(env.seedGameName);
 
       const { gameId, gameTitle } = await libraryPage.selectFirstSearchResult();
@@ -200,7 +193,13 @@ test.describe('Admin-User Onboarding Flow', () => {
       state.gameTitle = gameTitle || env.seedGameName;
     });
 
-    await test.step('Confirm and verify', async () => {
+    await test.step('Navigate through wizard and save', async () => {
+      await libraryPage.clickNext();
+      // Skip KB step if present
+      const nextBtn2 = page.getByRole('button', { name: /avanti|next/i });
+      if (await nextBtn2.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await nextBtn2.click();
+      }
       await libraryPage.confirmAddToCollection();
       await libraryPage.verifyGameInCollection(state.gameTitle!);
     });
