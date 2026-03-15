@@ -294,8 +294,8 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 6: User Creates Agent ───────────────────────────────
   test('6. User creates agent for the game', async () => {
-    // Known issue: /agents page errors on staging for user role
-    test.fixme(true, 'Staging /agents page returns error for user role — needs backend investigation');
+    // Agent creation requires a game with KB documents — custom game from Test 5 has no KB
+    test.fixme(true, 'Custom game has no KB documents — agent creation disabled until PDF upload flow is tested');
     const page = state.userPage!;
     const agentPage = new AgentCreationPage(page);
 
