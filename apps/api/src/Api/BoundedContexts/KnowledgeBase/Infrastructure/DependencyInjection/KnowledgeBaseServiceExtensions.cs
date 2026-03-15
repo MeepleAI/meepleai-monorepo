@@ -122,6 +122,9 @@ internal static class KnowledgeBaseServiceExtensions
         // RAG Enhancements: Adaptive query complexity classifier (heuristic + LLM fallback)
         services.AddScoped<IQueryComplexityClassifier, QueryComplexityClassifier>();
 
+        // RAG Enhancements: CRAG retrieval relevance evaluator (heuristic + LLM fallback)
+        services.AddScoped<IRetrievalRelevanceEvaluator, RetrievalRelevanceEvaluator>();
+
         // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
         services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
         services.AddSingleton<Domain.Services.MultiAgentRouter.RoutingMetricsCollector>();
