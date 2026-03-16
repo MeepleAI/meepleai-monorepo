@@ -201,7 +201,15 @@ export class LibraryPage extends BasePage {
     });
     const status = response.status();
     const body = await response.text();
-    console.log(`[LibraryPage] Enqueue PDF: status=${status}, body=${body.substring(0, 200)}`);
+    if (status >= 200 && status < 300) {
+      console.log(`[LibraryPage] PDF enqueued successfully: ${body.substring(0, 200)}`);
+    } else if (status === 409) {
+      console.log(`[LibraryPage] PDF already in queue (409) — OK`);
+    } else {
+      console.warn(
+        `[LibraryPage] Enqueue unexpected status=${status}, body=${body.substring(0, 200)}`
+      );
+    }
   }
 
   /**

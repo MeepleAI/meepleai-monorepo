@@ -1448,14 +1448,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("PDF {PdfId} enqueued for Quartz processing as fallback", pdfDocumentId);
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-#pragma warning disable CA1031 // Best-effort enqueue — conflicts and failures are expected
+#pragma warning disable CA1031 // Best-effort enqueue — conflicts and cancellations are expected
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Could not enqueue PDF {PdfId} for Quartz processing (may already be queued)", pdfDocumentId);
+            _logger.LogDebug(ex, "Could not enqueue PDF {PdfId} for Quartz processing (may already be queued or request cancelled)", pdfDocumentId);
         }
 #pragma warning restore CA1031
     }
@@ -1542,6 +1538,9 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         _backgroundTaskService.ExecuteWithCancellation(
             pdfDoc!.Id.ToString(),
             ct => ProcessPdfAsync(pdfDoc.Id.ToString(), pdfDoc.FilePath, userId, ct));
+
+        // Quartz fallback (same pattern as regular game path)
+        await EnqueueForProcessingSafelyAsync(pdfDoc.Id, userId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "PDF uploaded successfully for private game {PrivateGameId}: {FileName} ({FileSize} bytes)",
