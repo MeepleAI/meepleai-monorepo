@@ -161,7 +161,7 @@ public class HealthStatusChangedEventHandlerTests
         // by confirming the expected length constraint.
         var truncated = alertType.Length > 100 ? alertType[..100] : alertType;
 
-        truncated.Length.Should().BeLessOrEqual(100);
+        truncated.Length.Should().BeLessThanOrEqualTo(100);
         truncated.Should().StartWith("health.");
     }
 }
