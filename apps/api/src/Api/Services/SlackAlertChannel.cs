@@ -40,15 +40,15 @@ internal class SlackAlertChannel : IAlertChannel
             return false;
         }
 
-        if (string.IsNullOrEmpty(_config.WebhookUrl))
-        {
-            _logger.LogWarning("Slack webhook URL is not configured");
-            return false;
-        }
-
         try
         {
             var (resolvedWebhookUrl, resolvedChannel) = ResolveRoute(severity, metadata);
+
+            if (string.IsNullOrEmpty(resolvedWebhookUrl))
+            {
+                _logger.LogWarning("Slack webhook URL is not configured (no default or route match)");
+                return false;
+            }
             var payload = BuildSlackPayload(alertType, severity, message, metadata, resolvedChannel);
             // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
             // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests

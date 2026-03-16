@@ -48,12 +48,20 @@ internal sealed class HealthStatusChangedEventHandler
             ["_slack_category"] = category
         };
 
-        await alertingService.SendAlertAsync(alertType, severity, message, metadata, cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            await alertingService.SendAlertAsync(alertType, severity, message, metadata, cancellationToken)
+                .ConfigureAwait(false);
 
-        _logger.LogInformation(
-            "[HealthAlert] {AlertType} ({Severity}) → category={Category}",
-            alertType, severity, category);
+            _logger.LogInformation(
+                "[HealthAlert] {AlertType} ({Severity}) → category={Category}",
+                alertType, severity, category);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // AlertingService throws when disabled — log and continue, don't break DB persist
+            _logger.LogDebug(ex, "[HealthAlert] Alerting disabled, skipping {AlertType}", alertType);
+        }
     }
 
     internal static string MapCategory(string serviceName, string[] tags)

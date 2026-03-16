@@ -18,7 +18,7 @@ interface AlertHistoryItem {
   triggeredAt: string;
   resolvedAt: string | null;
   isActive: boolean;
-  channelSent: string[];
+  channelSent: Record<string, boolean> | null;
 }
 
 type SeverityFilter = 'All' | 'Critical' | 'Warning' | 'Info';
@@ -213,17 +213,21 @@ export function AlertHistoryTab() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
-                        {alert.channelSent.length === 0 ? (
+                        {!alert.channelSent ||
+                        Object.entries(alert.channelSent).filter(([, sent]) => sent).length ===
+                          0 ? (
                           <span className="text-xs text-muted-foreground">—</span>
                         ) : (
-                          alert.channelSent.map(ch => (
-                            <span
-                              key={ch}
-                              className="rounded bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground"
-                            >
-                              {ch}
-                            </span>
-                          ))
+                          Object.entries(alert.channelSent)
+                            .filter(([, sent]) => sent)
+                            .map(([channel]) => (
+                              <span
+                                key={channel}
+                                className="rounded bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground"
+                              >
+                                {channel}
+                              </span>
+                            ))
                         )}
                       </div>
                     </td>

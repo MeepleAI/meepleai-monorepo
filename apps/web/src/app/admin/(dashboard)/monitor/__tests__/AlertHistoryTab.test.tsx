@@ -39,7 +39,7 @@ const mockAlerts = [
     triggeredAt: '2026-03-15T10:00:00Z',
     resolvedAt: '2026-03-15T10:30:00Z',
     isActive: false,
-    channelSent: ['Email', 'Slack'],
+    channelSent: { Email: true, Slack: true, PagerDuty: false },
   },
   {
     id: 'alert-2',
@@ -50,7 +50,7 @@ const mockAlerts = [
     triggeredAt: '2026-03-15T12:00:00Z',
     resolvedAt: null,
     isActive: true,
-    channelSent: ['Email'],
+    channelSent: { Email: true, Slack: false },
   },
 ];
 
