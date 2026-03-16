@@ -3212,7 +3212,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const qs = new URLSearchParams();
       if (params.gameId) qs.set('gameId', params.gameId);
       if (params.limit) qs.set('pageSize', String(params.limit));
-      if (params.status) qs.set('statusFilter', params.status.join(','));
+      if (params.status) qs.set('status', params.status.join(','));
       const query = qs.toString();
       return httpClient.get(`/api/v1/admin/queue${query ? `?${query}` : ''}`, PaginatedQueueSchema);
     },
