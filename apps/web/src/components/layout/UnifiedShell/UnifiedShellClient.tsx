@@ -1,11 +1,13 @@
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { usePathname } from 'next/navigation';
 
+import { AgentCreationSheet } from '@/components/agent/config/AgentCreationSheet';
 import { DashboardEngineProvider } from '@/components/dashboard';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
+import { SearchAgentSheet } from '@/components/sheets/SearchAgentSheet';
 import { SearchGameSheet } from '@/components/sheets/SearchGameSheet';
 import { SessionSheet } from '@/components/sheets/SessionSheet';
 import { ALL_DEFAULT_CARDS, PLACEHOLDER_ACTION_CARDS } from '@/config/entity-actions';
@@ -59,6 +61,14 @@ export function UnifiedShellClient({
   const isAdminContext = context === 'admin';
   const { isDesktop } = useResponsive();
   const { handleCardClick, activeSheet, closeSheet } = usePlaceholderActions();
+
+  // Agent wizard handoff state: carries game + KB selection from SearchAgentSheet → AgentCreationSheet
+  const [agentWizardState, setAgentWizardState] = useState<{
+    gameId: string;
+    gameTitle: string;
+    documentIds: string[];
+    documentSummary: string;
+  } | null>(null);
 
   // Sync context with current route: admin routes → admin context, user routes → user context
   useEffect(() => {
@@ -158,6 +168,26 @@ export function UnifiedShellClient({
       {/* Action sheets */}
       <SearchGameSheet isOpen={activeSheet === 'search-game'} onClose={closeSheet} />
       <SessionSheet isOpen={activeSheet === 'start-session'} onClose={closeSheet} />
+      <SearchAgentSheet
+        isOpen={activeSheet === 'search-agent'}
+        onClose={closeSheet}
+        onCreateAgent={(gameId, gameTitle, documentIds, documentSummary) => {
+          closeSheet();
+          setAgentWizardState({ gameId, gameTitle, documentIds, documentSummary });
+        }}
+      />
+      {agentWizardState && (
+        <AgentCreationSheet
+          isOpen={!!agentWizardState}
+          onClose={() => setAgentWizardState(null)}
+          initialGameId={agentWizardState.gameId}
+          initialGameTitle={agentWizardState.gameTitle}
+          initialDocumentIds={agentWizardState.documentIds}
+          initialDocumentSummary={agentWizardState.documentSummary}
+          skipGameSelection
+          skipKBUpload
+        />
+      )}
     </div>
   );
 }
