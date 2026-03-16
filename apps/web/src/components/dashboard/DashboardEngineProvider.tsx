@@ -3,14 +3,23 @@
 import { createContext, useEffect, useRef } from 'react';
 
 import { useActorRef } from '@xstate/react';
-import { type ActorRefFrom } from 'xstate';
+import { createActor, type ActorRefFrom } from 'xstate';
 
 import { useSessionStore } from '@/lib/stores/sessionStore';
 
 import { dashboardMachine } from './DashboardEngine';
 
 export type DashboardActorRef = ActorRefFrom<typeof dashboardMachine>;
-export const DashboardEngineContext = createContext<DashboardActorRef | null>(null);
+
+/**
+ * Fallback actor: always in exploration state, send is a noop.
+ * Used as default context value so useDashboardMode never needs
+ * a conditional hook call.
+ */
+const fallbackActor = createActor(dashboardMachine);
+fallbackActor.start();
+
+export const DashboardEngineContext = createContext<DashboardActorRef>(fallbackActor);
 
 export function DashboardEngineProvider({ children }: { children: React.ReactNode }) {
   const actorRef = useActorRef(dashboardMachine);
