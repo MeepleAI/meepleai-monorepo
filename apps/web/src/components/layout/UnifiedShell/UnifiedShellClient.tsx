@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 
 import { DashboardEngineProvider } from '@/components/dashboard';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
-import { DEFAULT_PINNED_CARDS } from '@/config/entity-actions';
+import { ALL_DEFAULT_CARDS, PLACEHOLDER_ACTION_CARDS } from '@/config/entity-actions';
+import { usePlaceholderActions } from '@/hooks/usePlaceholderActions';
 import { useResponsive } from '@/hooks/useResponsive';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
@@ -55,6 +56,7 @@ export function UnifiedShellClient({
   } = useCardHand();
   const isAdminContext = context === 'admin';
   const { isDesktop } = useResponsive();
+  const { handleCardClick, activeSheet, closeSheet } = usePlaceholderActions();
 
   // Sync context with current route: admin routes → admin context, user routes → user context
   useEffect(() => {
@@ -66,16 +68,27 @@ export function UnifiedShellClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, pathname]);
 
-  // Seed default pinned section cards on first load
+  // Seed default cards (including placeholder action cards) on first load
   useEffect(() => {
     if (cards.length === 0) {
-      DEFAULT_PINNED_CARDS.forEach(card => {
+      ALL_DEFAULT_CARDS.forEach(card => {
         drawCard(card);
         pinCard(card.id);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Migration: add placeholder action cards for returning users who already have cards
+  useEffect(() => {
+    const hasPlaceholders = cards.some(c => c.isPlaceholder);
+    if (!hasPlaceholders) {
+      PLACEHOLDER_ACTION_CARDS.forEach(card => {
+        drawCard(card);
+        pinCard(card.id);
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col h-screen">
@@ -105,7 +118,7 @@ export function UnifiedShellClient({
       </ErrorBoundary>
 
       {/* Hand Drawer (mobile only, non-admin) */}
-      {!isDesktop && !isAdminContext && <HandDrawer />}
+      {!isDesktop && !isAdminContext && <HandDrawer onPlaceholderClick={handleCardClick} />}
 
       {/* Onboarding banner */}
       {onboardingBanner}
@@ -119,7 +132,7 @@ export function UnifiedShellClient({
               <AdminTabSidebar />
             ) : (
               <div className="hidden lg:flex">
-                <CardStack />
+                <CardStack onPlaceholderClick={handleCardClick} />
               </div>
             )}
           </ErrorBoundary>
@@ -139,6 +152,19 @@ export function UnifiedShellClient({
       <ErrorBoundary fallback={null} componentName="ContextualBottomNav">
         <ContextualBottomNav />
       </ErrorBoundary>
+
+      {/* Placeholder action sheets (temporary — real sheets come later) */}
+      {activeSheet && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+          onClick={closeSheet}
+        >
+          <div className="bg-white rounded-lg p-6" onClick={e => e.stopPropagation()}>
+            <p>Sheet: {activeSheet}</p>
+            <button onClick={closeSheet}>Chiudi</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

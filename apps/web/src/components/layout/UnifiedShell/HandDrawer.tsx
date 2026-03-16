@@ -2,11 +2,16 @@
 
 import { useDashboardMode } from '@/components/dashboard';
 import { SessionPanel } from '@/components/dashboard/SessionPanel';
+import type { HandCard } from '@/stores/use-card-hand';
 import { useCardHand } from '@/stores/use-card-hand';
 
 import { HandDrawerCard } from './HandDrawerCard';
 
-export function HandDrawer() {
+interface HandDrawerProps {
+  onPlaceholderClick?: (card: HandCard) => void;
+}
+
+export function HandDrawer({ onPlaceholderClick }: HandDrawerProps = {}) {
   const { cards, focusedIdx, isHandCollapsed, focusCard, maxHandSize, collapseHand } =
     useCardHand();
   const { isGameMode } = useDashboardMode();
@@ -51,6 +56,7 @@ export function HandDrawer() {
             card={card}
             isFocused={idx === focusedIdx}
             onClick={() => focusCard(idx)}
+            onPlaceholderClick={onPlaceholderClick}
           />
         ))}
       </div>

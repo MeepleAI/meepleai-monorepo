@@ -9,10 +9,15 @@ import { SessionPanelCollapsed } from '@/components/dashboard/SessionPanelCollap
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
+import type { HandCard } from '@/stores/use-card-hand';
 
 import { CardStackItem } from './CardStackItem';
 
-export function CardStack() {
+interface CardStackProps {
+  onPlaceholderClick?: (card: HandCard) => void;
+}
+
+export function CardStack({ onPlaceholderClick }: CardStackProps = {}) {
   const { cards, focusedIdx, pinnedIds, expandedStack, focusCard, discardCard, toggleExpandStack } =
     useCardHand();
   const { isGameMode } = useDashboardMode();
@@ -72,6 +77,7 @@ export function CardStack() {
               isPinned={false}
               onFocus={focusCard}
               onDiscard={discardCard}
+              onPlaceholderClick={onPlaceholderClick}
             />
           );
         })}
@@ -113,6 +119,7 @@ export function CardStack() {
               isPinned={true}
               onFocus={focusCard}
               onDiscard={discardCard}
+              onPlaceholderClick={onPlaceholderClick}
             />
           );
         })}
