@@ -19,33 +19,21 @@ describe('TechActionsBar', () => {
     expect(screen.getByTestId('tech-actions-bar')).toBeInTheDocument();
   });
 
-  it('renders System Health as a link to /admin/monitor', () => {
+  it('renders all actions as links', () => {
     render(<TechActionsBar />);
 
-    const systemHealthLink = screen.getByTestId('tech-action-system-health');
-    expect(systemHealthLink.tagName).toBe('A');
-    expect(systemHealthLink).toHaveAttribute('href', '/admin/monitor');
-  });
+    const actions = [
+      { id: 'clear-cache', href: '/admin/config' },
+      { id: 'reindex-all', href: '/admin/ai/knowledge-base' },
+      { id: 'system-health', href: '/admin/monitor' },
+      { id: 'export-users', href: '/admin/users' },
+    ];
 
-  it('renders Clear Cache as a button (not a link)', () => {
-    render(<TechActionsBar />);
-
-    const clearCacheBtn = screen.getByTestId('tech-action-clear-cache');
-    expect(clearCacheBtn.tagName).toBe('BUTTON');
-  });
-
-  it('renders Reindex All as a button (not a link)', () => {
-    render(<TechActionsBar />);
-
-    const reindexBtn = screen.getByTestId('tech-action-reindex-all');
-    expect(reindexBtn.tagName).toBe('BUTTON');
-  });
-
-  it('renders Export Users as a button (not a link)', () => {
-    render(<TechActionsBar />);
-
-    const exportBtn = screen.getByTestId('tech-action-export-users');
-    expect(exportBtn.tagName).toBe('BUTTON');
+    for (const action of actions) {
+      const el = screen.getByTestId(`tech-action-${action.id}`);
+      expect(el.tagName).toBe('A');
+      expect(el).toHaveAttribute('href', action.href);
+    }
   });
 
   it('renders separator dots between actions', () => {

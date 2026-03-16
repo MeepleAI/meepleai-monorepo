@@ -33,10 +33,19 @@ export function KPIStatsRow({
   const showPending = pendingApprovals > 0;
 
   // Compute the number of visible cards to set responsive grid cols
+  // Tailwind requires complete class names (no interpolation) for static analysis
   const cardCount = 2 + (showDocuments ? 1 : 0) + (showPending ? 1 : 0);
+  const gridColsClass: Record<number, string> = {
+    2: 'lg:grid-cols-2',
+    3: 'lg:grid-cols-3',
+    4: 'lg:grid-cols-4',
+  };
 
   return (
-    <div className={`grid grid-cols-2 lg:grid-cols-${cardCount} gap-4`} data-testid="kpi-stats-row">
+    <div
+      className={`grid grid-cols-2 ${gridColsClass[cardCount] ?? 'lg:grid-cols-4'} gap-4`}
+      data-testid="kpi-stats-row"
+    >
       {/* Card 1: Giochi — always visible */}
       <KPICard
         title="Giochi"
