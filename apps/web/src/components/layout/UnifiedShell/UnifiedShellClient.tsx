@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 
 import { DashboardEngineProvider } from '@/components/dashboard';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
+import { SearchGameSheet } from '@/components/sheets/SearchGameSheet';
+import { SessionSheet } from '@/components/sheets/SessionSheet';
 import { ALL_DEFAULT_CARDS, PLACEHOLDER_ACTION_CARDS } from '@/config/entity-actions';
 import { usePlaceholderActions } from '@/hooks/usePlaceholderActions';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -153,18 +155,9 @@ export function UnifiedShellClient({
         <ContextualBottomNav />
       </ErrorBoundary>
 
-      {/* Placeholder action sheets (temporary — real sheets come later) */}
-      {activeSheet && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
-          onClick={closeSheet}
-        >
-          <div className="bg-white rounded-lg p-6" onClick={e => e.stopPropagation()}>
-            <p>Sheet: {activeSheet}</p>
-            <button onClick={closeSheet}>Chiudi</button>
-          </div>
-        </div>
-      )}
+      {/* Action sheets */}
+      <SearchGameSheet isOpen={activeSheet === 'search-game'} onClose={closeSheet} />
+      <SessionSheet isOpen={activeSheet === 'start-session'} onClose={closeSheet} />
     </div>
   );
 }
