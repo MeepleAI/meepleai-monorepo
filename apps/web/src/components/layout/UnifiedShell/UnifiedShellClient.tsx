@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { SearchAgentSheet } from '@/components/sheets/SearchAgentSheet';
 import { SearchGameSheet } from '@/components/sheets/SearchGameSheet';
 import { SessionSheet } from '@/components/sheets/SessionSheet';
+import { ToolkitSheet } from '@/components/sheets/ToolkitSheet';
 import { ALL_DEFAULT_CARDS, PLACEHOLDER_ACTION_CARDS } from '@/config/entity-actions';
 import { usePlaceholderActions } from '@/hooks/usePlaceholderActions';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -92,9 +93,9 @@ export function UnifiedShellClient({
   }, []);
 
   // Migration: add placeholder action cards for returning users who already have cards
+  // Guard: only runs if user has existing cards but no placeholders (not for fresh users)
   useEffect(() => {
-    const hasPlaceholders = cards.some(c => c.isPlaceholder);
-    if (!hasPlaceholders) {
+    if (cards.length > 0 && !cards.some(c => c.isPlaceholder)) {
       PLACEHOLDER_ACTION_CARDS.forEach(card => {
         drawCard(card);
         pinCard(card.id);
@@ -168,6 +169,7 @@ export function UnifiedShellClient({
       {/* Action sheets */}
       <SearchGameSheet isOpen={activeSheet === 'search-game'} onClose={closeSheet} />
       <SessionSheet isOpen={activeSheet === 'start-session'} onClose={closeSheet} />
+      <ToolkitSheet isOpen={activeSheet === 'toolkit'} onClose={closeSheet} />
       <SearchAgentSheet
         isOpen={activeSheet === 'search-agent'}
         onClose={closeSheet}

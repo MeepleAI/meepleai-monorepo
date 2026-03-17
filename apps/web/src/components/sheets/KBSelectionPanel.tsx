@@ -324,7 +324,8 @@ export function KBSelectionPanel({ gameId, gameTitle, onBack, onConfirm }: KBSel
       {/* Auto-selection notice */}
       <div className="mx-4 mt-3 p-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
         <p className="text-xs text-green-700 dark:text-green-300">
-          Pre-selezionato: Rulebook e Errata pi&ugrave; recenti. Puoi modificare la selezione.
+          Pre-selezionato: Rulebook{documents.some(d => d.documentType === 1) ? ' e Errata' : ''}{' '}
+          pi&ugrave; recenti. Puoi modificare la selezione.
         </p>
       </div>
 
