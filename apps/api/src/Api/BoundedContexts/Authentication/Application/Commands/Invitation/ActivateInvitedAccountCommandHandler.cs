@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -64,13 +65,21 @@ internal sealed class ActivateInvitedAccountCommandHandler
             .GetByTokenHashAsync(tokenHash, cancellationToken)
             .ConfigureAwait(false);
 
-        // 3. Validate: token exists and is still valid (pending + not expired)
-        if (invitation is null || !invitation.IsValid)
-            throw new NotFoundException("InvitationToken", command.Token);
+        // 3. Validate: token exists
+        if (invitation is null)
+            throw new BadRequestException("Invalid or expired invitation token");
+
+        // 3a. Check if already used — allow frontend to redirect to login
+        if (invitation.Status == InvitationStatus.Accepted)
+            throw new BadRequestException("This invitation has already been used");
+
+        // 3b. Validate: token is still valid (pending + not expired)
+        if (!invitation.IsValid)
+            throw new BadRequestException("Invalid or expired invitation token");
 
         // 4. Find the pre-provisioned pending user
         if (invitation.PendingUserId is null)
-            throw new NotFoundException("InvitationToken", "PendingUserId is not set on this invitation");
+            throw new BadRequestException("Invalid invitation: no associated user account");
 
         var user = await _userRepo
             .GetByIdAsync(invitation.PendingUserId.Value, cancellationToken)

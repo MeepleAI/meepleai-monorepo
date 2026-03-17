@@ -33,6 +33,7 @@ interface PasswordValidation {
   hasUppercase: boolean;
   hasLowercase: boolean;
   hasNumber: boolean;
+  hasSpecialChar: boolean;
   isValid: boolean;
   strength: PasswordStrength;
 }
@@ -53,13 +54,16 @@ const validatePassword = (password: string): PasswordValidation => {
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[^a-zA-Z0-9]/.test(password);
 
-  const requirementsMet = [minLength, hasUppercase, hasLowercase, hasNumber].filter(Boolean).length;
+  const requirementsMet = [minLength, hasUppercase, hasLowercase, hasNumber, hasSpecialChar].filter(
+    Boolean
+  ).length;
 
   let strength: PasswordStrength = 'weak';
-  if (requirementsMet === 4) {
+  if (requirementsMet === 5) {
     strength = 'strong';
-  } else if (requirementsMet >= 2 && minLength) {
+  } else if (requirementsMet >= 3 && minLength) {
     strength = 'medium';
   }
 
@@ -68,7 +72,8 @@ const validatePassword = (password: string): PasswordValidation => {
     hasUppercase,
     hasLowercase,
     hasNumber,
-    isValid: minLength && hasUppercase && hasLowercase && hasNumber,
+    hasSpecialChar,
+    isValid: minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar,
     strength,
   };
 };
@@ -147,6 +152,7 @@ export function SetupAccountContent() {
     hasUppercase: false,
     hasLowercase: false,
     hasNumber: false,
+    hasSpecialChar: false,
     isValid: false,
     strength: 'weak',
   });
@@ -230,6 +236,7 @@ export function SetupAccountContent() {
         hasUppercase: false,
         hasLowercase: false,
         hasNumber: false,
+        hasSpecialChar: false,
         isValid: false,
         strength: 'weak',
       });
@@ -468,6 +475,18 @@ export function SetupAccountContent() {
               >
                 <span aria-hidden="true">{passwordValidation.hasNumber ? '\u2713' : '\u25CB'}</span>
                 <span>Almeno 1 numero</span>
+              </div>
+              <div
+                className={`flex items-center gap-2 ${
+                  passwordValidation.hasSpecialChar
+                    ? 'text-green-400'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <span aria-hidden="true">
+                  {passwordValidation.hasSpecialChar ? '\u2713' : '\u25CB'}
+                </span>
+                <span>Almeno 1 carattere speciale (!@#$%...)</span>
               </div>
             </div>
           </div>

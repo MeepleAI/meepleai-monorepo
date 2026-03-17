@@ -113,11 +113,23 @@ internal sealed class ProvisionAndInviteUserCommandHandler : ICommandHandler<Pro
         var emailSent = true;
         try
         {
+            // Look up the admin who sent the invitation to include their name in the email
+            var invitedByName = "Admin";
+            if (command.InvitedByUserId != Guid.Empty)
+            {
+                var adminUser = await _userRepo.GetByIdAsync(command.InvitedByUserId, cancellationToken).ConfigureAwait(false);
+                if (adminUser is not null)
+                    invitedByName = adminUser.DisplayName ?? "Admin";
+            }
+
             await _emailService.SendInvitationEmailAsync(
                 normalizedEmail,
+                command.DisplayName,
                 command.Role,
                 rawToken,
-                command.DisplayName,
+                invitedByName,
+                command.CustomMessage,
+                expiresAt,
                 cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
