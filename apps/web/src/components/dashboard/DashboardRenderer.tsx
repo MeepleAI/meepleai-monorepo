@@ -4,6 +4,7 @@ import { Suspense, useCallback } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
+import { ExtraMeepleCardDrawer } from '@/components/ui/data-display/extra-meeple-card';
 import { useDashboardSearchStore } from '@/stores/useDashboardSearchStore';
 
 import { AddToLibraryModal } from './AddToLibraryModal';
@@ -25,7 +26,8 @@ function ZoneSkeleton({ testId }: { testId: string }) {
  */
 export function DashboardRenderer() {
   const { state, isGameMode, isExploration } = useDashboardMode();
-  const { selectedGame, setSelectedGame, openChatDrawer } = useDashboardSearchStore();
+  const { selectedGame, setSelectedGame, openChatDrawer, drawerState, closeChatDrawer } =
+    useDashboardSearchStore();
 
   const handleModalSuccess = useCallback(
     ({ gameId, threadId, agentId }: { gameId: string; threadId: string; agentId: string }) => {
@@ -98,6 +100,17 @@ export function DashboardRenderer() {
         onClose={() => setSelectedGame(null)}
         onSuccess={handleModalSuccess}
       />
+
+      {drawerState && (
+        <ExtraMeepleCardDrawer
+          entityType="chatSession"
+          entityId={drawerState.threadId}
+          open={true}
+          onClose={closeChatDrawer}
+          liveChatData={drawerState}
+          data-testid="dashboard-chat-drawer"
+        />
+      )}
     </div>
   );
 }
