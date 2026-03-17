@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -16,6 +16,14 @@ const mockUseDashboardData = vi.fn();
 
 vi.mock('@/hooks/useDashboardData', () => ({
   useDashboardData: () => mockUseDashboardData(),
+}));
+
+const mockOpenSearch = vi.fn();
+
+vi.mock('@/stores/useDashboardSearchStore', () => ({
+  useDashboardSearchStore: {
+    getState: () => ({ openSearch: mockOpenSearch }),
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -146,7 +154,7 @@ describe('HeroZone', () => {
     expect(zone).toBeInTheDocument();
   });
 
-  it('shows welcome prompt for new user with zero games', () => {
+  it('shows search CTA for new user with zero games', () => {
     mockUseDashboardData.mockReturnValue({
       data: {
         ...MOCK_DASHBOARD_DATA,
@@ -160,7 +168,27 @@ describe('HeroZone', () => {
 
     renderWithProviders(<HeroZone />);
 
-    expect(screen.getByText(/Aggiungi il tuo primo gioco/)).toBeInTheDocument();
+    expect(screen.getByTestId('hero-search-cta')).toBeInTheDocument();
+    expect(screen.getByText(/Cerca un gioco/)).toBeInTheDocument();
+    expect(screen.getByText(/Hai una domanda su un gioco da tavolo/)).toBeInTheDocument();
+  });
+
+  it('calls openSearch when search CTA is clicked', () => {
+    mockUseDashboardData.mockReturnValue({
+      data: {
+        ...MOCK_DASHBOARD_DATA,
+        stats: {
+          ...MOCK_DASHBOARD_DATA.stats,
+          libraryCount: 0,
+        },
+      },
+      isLoading: false,
+    });
+
+    renderWithProviders(<HeroZone />);
+
+    fireEvent.click(screen.getByTestId('hero-search-cta'));
+    expect(mockOpenSearch).toHaveBeenCalledOnce();
   });
 
   it('shows stats summary for existing user', () => {
@@ -175,7 +203,7 @@ describe('HeroZone', () => {
     expect(screen.getByText(/12 partite questo mese/)).toBeInTheDocument();
   });
 
-  it('does not show welcome prompt for user with games', () => {
+  it('does not show search CTA for user with games', () => {
     mockUseDashboardData.mockReturnValue({
       data: MOCK_DASHBOARD_DATA,
       isLoading: false,
@@ -183,6 +211,6 @@ describe('HeroZone', () => {
 
     renderWithProviders(<HeroZone />);
 
-    expect(screen.queryByText(/Aggiungi il tuo primo gioco/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-search-cta')).not.toBeInTheDocument();
   });
 });

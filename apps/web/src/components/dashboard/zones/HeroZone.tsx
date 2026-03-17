@@ -2,7 +2,10 @@
 
 import { useMemo } from 'react';
 
+import { Search } from 'lucide-react';
+
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useDashboardSearchStore } from '@/stores/useDashboardSearchStore';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -60,19 +63,6 @@ function GameNightBanner({
   );
 }
 
-function WelcomePrompt() {
-  return (
-    <div className="mt-4 flex items-center gap-3 rounded-xl bg-white/60 dark:bg-white/10 px-4 py-3 backdrop-blur-sm">
-      <span className="text-2xl" role="img" aria-label="wave">
-        👋
-      </span>
-      <p className="text-sm text-amber-900 dark:text-amber-100">
-        Aggiungi il tuo primo gioco alla libreria per iniziare!
-      </p>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // HeroZone
 // ---------------------------------------------------------------------------
@@ -113,7 +103,24 @@ export function HeroZone() {
 
       {upcomingGameNight && <GameNightBanner gameNight={upcomingGameNight} />}
 
-      {isNewUser && <WelcomePrompt />}
+      {isNewUser && (
+        <div className="mt-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 p-6 text-center">
+          <p className="text-sm text-purple-300 mb-4">
+            {greeting}
+            {user?.username ? `, ${user.username}` : ''}!<br />
+            Hai una domanda su un gioco da tavolo? Cerca nella community e chiedi all&apos;AI!
+          </p>
+          <button
+            onClick={() => useDashboardSearchStore.getState().openSearch()}
+            className="inline-flex items-center gap-2 rounded-lg bg-purple-500/15 border border-purple-500/25 px-4 py-2 text-sm font-medium text-purple-300 hover:bg-purple-500/25 transition-colors"
+            data-testid="hero-search-cta"
+          >
+            <Search className="w-4 h-4" />
+            Cerca un gioco
+          </button>
+          <p className="mt-2 text-xs text-muted-foreground">oppure usa la barra in basso ↓</p>
+        </div>
+      )}
     </section>
   );
 }
