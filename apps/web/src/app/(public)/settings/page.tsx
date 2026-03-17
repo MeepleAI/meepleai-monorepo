@@ -88,7 +88,7 @@ interface OAuthAccount {
   createdAt: string;
 }
 
-// Privacy preferences (local state until API is implemented)
+// Privacy preferences (persisted via preferences API)
 interface PrivacyPreferences {
   publicProfile: boolean;
   showLibrary: boolean;
@@ -126,10 +126,13 @@ export default function SettingsPage() {
     emailNotifications: true,
     theme: 'system',
     dataRetentionDays: 90,
+    showProfile: true,
+    showActivity: true,
+    showLibrary: true,
   });
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
 
-  // Privacy preferences (local until API)
+  // Privacy preferences (loaded from preferences API)
   const [privacyPrefs, setPrivacyPrefs] = useState<PrivacyPreferences>({
     publicProfile: false,
     showLibrary: false,
@@ -205,12 +208,33 @@ export default function SettingsPage() {
       setEmail(user.email);
       // Issue #2755: Fix TypeError when user properties are undefined
       // Hydrate preferences from profile with defensive defaults
-      setPreferences({
+      setPreferences(prev => ({
+        ...prev,
         language: user.language || 'en',
         theme: (user.theme as 'light' | 'dark' | 'system') || 'system',
         emailNotifications: user.emailNotifications ?? true,
         dataRetentionDays: user.dataRetentionDays ?? 90,
-      });
+      }));
+      // Load privacy preferences from the preferences endpoint
+      try {
+        const prefs = await api.auth.getPreferences();
+        if (prefs) {
+          setPreferences(prev => ({
+            ...prev,
+            showProfile: prefs.showProfile ?? true,
+            showActivity: prefs.showActivity ?? true,
+            showLibrary: prefs.showLibrary ?? true,
+          }));
+          setPrivacyPrefs(prev => ({
+            ...prev,
+            publicProfile: prefs.showProfile ?? true,
+            showActivity: prefs.showActivity ?? true,
+            showLibrary: prefs.showLibrary ?? true,
+          }));
+        }
+      } catch {
+        // Privacy prefs load failure is non-critical — defaults are safe
+      }
       setError(null);
     } catch (err) {
       logger.error(
@@ -389,10 +413,33 @@ export default function SettingsPage() {
     }
   };
 
-  // Privacy preferences update (local for now)
-  const handleUpdatePrivacy = () => {
-    setSuccess('Privacy settings saved locally');
-    // TODO: Call API when privacy endpoint is implemented
+  // Privacy preferences update — persists via preferences API
+  const handleUpdatePrivacy = async () => {
+    setSuccess(null);
+    setError(null);
+
+    try {
+      setLoading(true);
+      await api.auth.updatePreferences({
+        ...preferences,
+        showProfile: privacyPrefs.publicProfile,
+        showActivity: privacyPrefs.showActivity,
+        showLibrary: privacyPrefs.showLibrary,
+      });
+      setSuccess('Privacy settings saved successfully');
+    } catch (err) {
+      const errorMsg = getErrorMessage(err);
+      logger.error(
+        'Failed to update privacy settings',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'handleUpdatePrivacy', {
+          operation: 'update_privacy',
+        })
+      );
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 2FA handlers
