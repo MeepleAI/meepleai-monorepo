@@ -19,15 +19,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { Search } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
+import { SearchExpander } from '@/components/dashboard/SearchExpander';
+import type { SharedGameSearchResult } from '@/components/dashboard/SearchExpander';
 import { resolveSmartFab } from '@/config/smart-fab';
 import type { SmartFabAction } from '@/config/smart-fab';
 import { useNavigation } from '@/context/NavigationContext';
 import { usePrefersReducedMotion } from '@/hooks/useResponsive';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useDashboardSearchStore } from '@/stores/useDashboardSearchStore';
 
 // ─── QuickMenu Item ──────────────────────────────────────────────────────────
 
@@ -132,6 +137,7 @@ function QuickMenuItem({
 
 export function SmartFAB() {
   const pathname = usePathname();
+  const router = useRouter();
   const scrollDirection = useScrollDirection({ threshold: 50 });
   const prefersReducedMotion = usePrefersReducedMotion();
   const { actionBarActions } = useNavigation();
@@ -140,6 +146,53 @@ export function SmartFAB() {
   const [isMorphing, setIsMorphing] = useState(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPathnameRef = useRef(pathname);
+
+  // Dashboard search state
+  const { isSearchOpen, openSearch, closeSearch, setSelectedGame, openChatDrawer } =
+    useDashboardSearchStore();
+
+  const isDashboard = pathname === '/dashboard';
+
+  const handleViewGame = useCallback(
+    (gameId: string) => {
+      closeSearch();
+      router.push(`/shared-games/${gameId}`);
+    },
+    [closeSearch, router]
+  );
+
+  const handleAskAboutGame = useCallback(
+    async (game: SharedGameSearchResult) => {
+      closeSearch();
+      const gameName = game.title;
+      const gameResult = {
+        id: game.id,
+        name: gameName,
+        imageUrl: game.thumbnailUrl ?? null,
+        playerCount: `${game.minPlayers}-${game.maxPlayers}`,
+      };
+      if (game.isInLibrary) {
+        // Game is in library — create thread directly and open drawer
+        try {
+          const thread = await api.chat.createThread({
+            gameId: game.id,
+            title: gameName,
+          });
+          openChatDrawer({
+            threadId: thread.id,
+            agentId: thread.agentId ?? '',
+            gameId: game.id,
+            gameName,
+          });
+        } catch {
+          setSelectedGame(gameResult);
+        }
+      } else {
+        setSelectedGame(gameResult);
+      }
+    },
+    [closeSearch, setSelectedGame, openChatDrawer]
+  );
 
   const resolved = useMemo(() => resolveSmartFab(pathname), [pathname]);
   const { primary: action, secondary: secondaryActions } = resolved;
@@ -310,6 +363,27 @@ export function SmartFAB() {
             />
           ))}
         </div>
+      )}
+
+      {/* Dashboard search button + expander */}
+      {isDashboard && (
+        <>
+          <button
+            type="button"
+            onClick={openSearch}
+            className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/20"
+            data-testid="smart-fab-search"
+            aria-label="Cerca un gioco"
+          >
+            <Search className="h-5 w-5 text-white" />
+          </button>
+          <SearchExpander
+            isOpen={isSearchOpen}
+            onClose={closeSearch}
+            onViewGame={handleViewGame}
+            onAskAboutGame={handleAskAboutGame}
+          />
+        </>
       )}
 
       {/* Main FAB button */}

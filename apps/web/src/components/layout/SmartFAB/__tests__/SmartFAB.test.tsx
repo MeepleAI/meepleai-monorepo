@@ -13,9 +13,11 @@ import { SmartFAB } from '../SmartFAB';
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockPathname = vi.fn(() => '/dashboard');
+const mockPush = vi.fn();
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname(),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 vi.mock('next/link', () => ({
@@ -46,6 +48,26 @@ vi.mock('@/hooks/useScrollDirection', () => ({
 
 vi.mock('@/hooks/useResponsive', () => ({
   usePrefersReducedMotion: () => false,
+}));
+
+vi.mock('@/stores/useDashboardSearchStore', () => ({
+  useDashboardSearchStore: () => ({
+    isSearchOpen: false,
+    openSearch: vi.fn(),
+    closeSearch: vi.fn(),
+    setSelectedGame: vi.fn(),
+    openChatDrawer: vi.fn(),
+  }),
+}));
+
+vi.mock('@/components/dashboard/SearchExpander', () => ({
+  SearchExpander: () => null,
+}));
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    chat: { createThread: vi.fn() },
+  },
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
