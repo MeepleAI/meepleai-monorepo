@@ -132,6 +132,7 @@ export type UpdateGameStateRequest = z.infer<typeof UpdateGameStateRequestSchema
 export interface GetUserLibraryParams {
   page?: number;
   pageSize?: number;
+  search?: string;
   favoritesOnly?: boolean;
   stateFilter?: GameStateType[];
   sortBy?: 'addedAt' | 'title' | 'favorite';
