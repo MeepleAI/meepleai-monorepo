@@ -1,7 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
-using Api.BoundedContexts.Administration.Domain.Enums; // Epic #4068: UserAccountStatus
+using Api.SharedKernel.Domain.Enums; // Epic #4068: UserAccountStatus (moved to SharedKernel)
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 
