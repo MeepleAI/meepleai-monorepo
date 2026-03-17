@@ -767,8 +767,7 @@ export default function SettingsPage() {
                       // Optimistic UI update
                       setAvatarUrl(previewUrl);
                       try {
-                        // TODO: Upload to backend when API is available
-                        // await api.auth.uploadAvatar(file);
+                        await api.auth.uploadAvatar(file);
                         setSuccess('Avatar aggiornato con successo!');
                       } catch (err) {
                         // Revert on error
@@ -817,7 +816,12 @@ export default function SettingsPage() {
                     </p>
                   </div>
 
-                  <Button onClick={handleUpdateProfile} disabled={loading} className="bg-orange-500 hover:bg-orange-600" data-testid="save-profile-button">
+                  <Button
+                    onClick={handleUpdateProfile}
+                    disabled={loading}
+                    className="bg-orange-500 hover:bg-orange-600"
+                    data-testid="save-profile-button"
+                  >
                     Salva profilo
                   </Button>
                 </div>
@@ -839,9 +843,7 @@ export default function SettingsPage() {
                         className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg"
                         title={badge.description}
                       >
-                        <div
-                          className={`w-3 h-3 rounded-full ${getBadgeTierColor(badge.tier)}`}
-                        />
+                        <div className={`w-3 h-3 rounded-full ${getBadgeTierColor(badge.tier)}`} />
                         <span className="text-sm font-medium">{badge.name}</span>
                       </div>
                     ))}
@@ -972,7 +974,11 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <Button onClick={handleUpdatePreferences} className="bg-orange-500 hover:bg-orange-600" data-testid="save-preferences-button">
+                <Button
+                  onClick={handleUpdatePreferences}
+                  className="bg-orange-500 hover:bg-orange-600"
+                  data-testid="save-preferences-button"
+                >
                   Salva preferenze
                 </Button>
               </CardContent>
@@ -1155,7 +1161,9 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Cambia password</CardTitle>
-                <CardDescription>Aggiorna la tua password per mantenere sicuro il tuo account</CardDescription>
+                <CardDescription>
+                  Aggiorna la tua password per mantenere sicuro il tuo account
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -1191,7 +1199,12 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <Button onClick={handleChangePassword} disabled={loading} className="bg-orange-500 hover:bg-orange-600" data-testid="change-password-button">
+                <Button
+                  onClick={handleChangePassword}
+                  disabled={loading}
+                  className="bg-orange-500 hover:bg-orange-600"
+                  data-testid="change-password-button"
+                >
                   Cambia password
                 </Button>
               </CardContent>
@@ -1201,7 +1214,9 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Autenticazione a due fattori</CardTitle>
-                <CardDescription>Aggiungi un livello extra di sicurezza al tuo account</CardDescription>
+                <CardDescription>
+                  Aggiungi un livello extra di sicurezza al tuo account
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {twoFactorStatus?.isEnabled ? (
@@ -1304,7 +1319,9 @@ export default function SettingsPage() {
                         {showBackupCodes && (
                           <Alert variant="destructive">
                             <AlertDescription>
-                              <h4 className="font-semibold mb-2">Passo 2: Salva i codici di backup</h4>
+                              <h4 className="font-semibold mb-2">
+                                Passo 2: Salva i codici di backup
+                              </h4>
                               <p className="mb-3">
                                 ⚠️ Salva questi codici in un luogo sicuro. Ogni codice può essere
                                 usato una sola volta.
@@ -1413,9 +1430,7 @@ export default function SettingsPage() {
                         >
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
-                              <div className="font-medium">
-                                {getDeviceInfo(session.userAgent)}
-                              </div>
+                              <div className="font-medium">{getDeviceInfo(session.userAgent)}</div>
                               {isCurrent && (
                                 <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded">
                                   Sessione attuale
@@ -1606,10 +1621,7 @@ export default function SettingsPage() {
                     tuoi dati verranno eliminati definitivamente.
                   </AlertDescription>
                 </Alert>
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
+                <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
                   Elimina account
                 </Button>
               </CardContent>
