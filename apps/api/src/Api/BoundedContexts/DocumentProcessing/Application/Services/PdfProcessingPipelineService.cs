@@ -193,15 +193,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
-        var fileId = pdfDoc.Id.ToString();
+        // Issue #501: Use blob storage with correct GUID format (no hyphens) to match StoreAsync key format
+        var fileId = pdfDoc.Id.ToString("N"); // "N" = no hyphens, matches S3BlobStorageService.StoreAsync
         var gameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
         var fileStream = await _blobStorageService.RetrieveAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
         {
-            // Fallback to local filesystem for backward compatibility
+            // Fallback to local filesystem for backward compatibility (dev without S3)
             _logger.LogWarning("[PdfPipeline] Blob storage returned null for {PdfId}, falling back to filesystem path: {FilePath}", fileId, filePath);
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException(
+                    $"PDF file not found in blob storage or filesystem: {filePath}", filePath);
+            }
             fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
 
