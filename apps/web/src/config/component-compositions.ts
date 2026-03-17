@@ -45,7 +45,7 @@ export const COMPOSITIONS: ComponentComposition[] = [
     name: 'Game Management',
     description: 'GameForm, PdfUploadSection, CategoriesTable, GameStatusBadge',
     area: 'admin',
-    componentIds: ['game-form', 'pdf-upload-section', 'categories-table', 'game-status-badge'],
+    componentIds: ['game-form', 'pdf-upload-section', 'game-status-badge'],
     render: () =>
       import('@/components/admin/ui-library/scenes/GameManagementScene') as Promise<{
         default: React.ComponentType;
@@ -56,12 +56,7 @@ export const COMPOSITIONS: ComponentComposition[] = [
     name: 'Agent Builder',
     description: 'AgentBuilderModal, LlmProviderSelector, DocumentSelector, AgentConfigPanel',
     area: 'admin',
-    componentIds: [
-      'agent-builder-modal',
-      'llm-provider-selector',
-      'document-selector',
-      'agent-config-panel',
-    ],
+    componentIds: ['agent-builder-modal', 'agent-config-panel'],
     render: () =>
       import('@/components/admin/ui-library/scenes/AgentBuilderScene') as Promise<{
         default: React.ComponentType;
@@ -72,7 +67,7 @@ export const COMPOSITIONS: ComponentComposition[] = [
     name: 'User Administration',
     description: 'PermissionsMatrix, RoleCard, ActivityTable, InviteUserDialog',
     area: 'admin',
-    componentIds: ['permissions-matrix', 'role-card', 'activity-table', 'invite-user-dialog'],
+    componentIds: ['permissions-matrix', 'role-card', 'user-activity-table', 'invite-user-dialog'],
     render: () =>
       import('@/components/admin/ui-library/scenes/UserAdminScene') as Promise<{
         default: React.ComponentType;
@@ -105,7 +100,7 @@ export const COMPOSITIONS: ComponentComposition[] = [
     name: 'Usage Monitoring',
     description: 'KpiCards, UsageChart, CostBreakdownChart',
     area: 'admin',
-    componentIds: ['kpi-cards', 'usage-chart', 'cost-breakdown-chart'],
+    componentIds: ['usage-kpi-cards', 'usage-chart', 'cost-breakdown-chart'],
     render: () =>
       import('@/components/admin/ui-library/scenes/UsageMonitoringScene') as Promise<{
         default: React.ComponentType;

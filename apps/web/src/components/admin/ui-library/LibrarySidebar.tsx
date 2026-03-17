@@ -63,14 +63,6 @@ interface LibrarySidebarProps {
 }
 
 export function LibrarySidebar({ categories, areas, filters, onChange }: LibrarySidebarProps) {
-  const tierItems: { value: 'interactive' | 'static'; count: number }[] = [
-    {
-      value: 'interactive',
-      count: categories.reduce((acc, _) => acc, 0), // placeholder — caller provides counts
-    },
-    { value: 'static', count: 0 },
-  ];
-
   return (
     <aside className="w-60 shrink-0 space-y-6 py-2" aria-label="Component library filters">
       <SidebarGroup<ComponentCategory>

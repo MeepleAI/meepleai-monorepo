@@ -116,16 +116,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tags: ['card', 'compound', 'composite'],
   },
   {
-    id: 'meeple-card-parts',
-    name: 'MeepleCardParts',
-    importPath: '@/components/ui/data-display/meeple-card-parts',
-    category: 'Data Display',
-    areas: ['shared'],
-    tier: 'static',
-    description: 'Individual atomic parts used to compose MeepleCard.',
-    tags: ['card', 'parts', 'atoms'],
-  },
-  {
     id: 'meeple-card-browser',
     name: 'MeepleCardBrowser',
     importPath: '@/components/ui/data-display/meeple-card-browser/MeepleCardBrowser',
