@@ -24,6 +24,8 @@ using LogoutAllDevicesCommand = Api.BoundedContexts.Authentication.Application.C
 using GetSessionByTokenHashQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionByTokenHashQuery;
 using AcceptInvitationCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.AcceptInvitationCommand;
 using ValidateInvitationTokenQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.ValidateInvitationTokenQuery;
+using GetPendingInvitationsQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.GetPendingInvitationsQuery;
+using GetInvitationByIdQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.GetInvitationByIdQuery;
 
 namespace Api.Routing;
 
@@ -683,7 +685,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
         .WithName("ValidateInvitationToken")
         .WithTags("Authentication", "Invitations")
         .WithSummary("Validate an invitation token")
-        .WithDescription("Checks whether an invitation token is valid without consuming it. Returns role and expiry info.")
+        .WithDescription("Checks whether an invitation token is valid without consuming it. Returns email and display name for valid tokens, or a uniform error reason (\"invalid\" or \"already_used\") to prevent state enumeration.")
         .RequireRateLimiting("AuthRegister")
         .Produces(200)
         .Produces(400);
