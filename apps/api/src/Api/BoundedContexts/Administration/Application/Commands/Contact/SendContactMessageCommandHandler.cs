@@ -23,10 +23,8 @@ internal class SendContactMessageCommandHandler : ICommandHandler<SendContactMes
         var messageId = Guid.NewGuid();
 
         _logger.LogInformation(
-            "Contact message received: Id={MessageId}, Name={Name}, Email={Email}, Subject={Subject}",
+            "Contact message received: Id={MessageId}, Subject={Subject}",
             messageId,
-            command.Name,
-            command.Email,
             command.Subject);
 
         return Task.FromResult(messageId);

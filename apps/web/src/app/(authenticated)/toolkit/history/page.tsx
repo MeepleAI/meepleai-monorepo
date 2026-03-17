@@ -114,9 +114,6 @@ export default function ToolkitHistoryPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All games</SelectItem>
-                    <SelectItem value="7-wonders">7 Wonders</SelectItem>
-                    <SelectItem value="splendor">Splendor</SelectItem>
-                    <SelectItem value="catan">Catan</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

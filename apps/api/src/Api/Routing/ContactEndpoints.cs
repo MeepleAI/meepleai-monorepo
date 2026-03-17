@@ -19,7 +19,8 @@ internal static class ContactEndpoints
         .WithName("SendContactMessage")
         .WithSummary("Submit a contact form message")
         .WithTags("Contact")
-        .AllowAnonymous();
+        .AllowAnonymous()
+        .RequireRateLimiting("ContactForm");
 
         return group;
     }

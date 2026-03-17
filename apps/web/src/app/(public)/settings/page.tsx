@@ -93,7 +93,6 @@ interface PrivacyPreferences {
   publicProfile: boolean;
   showLibrary: boolean;
   showActivity: boolean;
-  showBadges: boolean;
 }
 
 export default function SettingsPage() {
@@ -137,7 +136,6 @@ export default function SettingsPage() {
     publicProfile: false,
     showLibrary: false,
     showActivity: false,
-    showBadges: true,
   });
 
   // 2FA state
@@ -1086,22 +1084,6 @@ export default function SettingsPage() {
                     checked={privacyPrefs.showActivity}
                     onCheckedChange={checked =>
                       setPrivacyPrefs({ ...privacyPrefs, showActivity: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="showBadges">Mostra badge</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Mostra i tuoi badge nel profilo pubblico
-                    </p>
-                  </div>
-                  <Switch
-                    id="showBadges"
-                    checked={privacyPrefs.showBadges}
-                    onCheckedChange={checked =>
-                      setPrivacyPrefs({ ...privacyPrefs, showBadges: checked })
                     }
                   />
                 </div>
