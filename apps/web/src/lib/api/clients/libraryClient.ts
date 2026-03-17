@@ -226,6 +226,10 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
           favoriteGames: 0,
           oldestAddedAt: null,
           newestAddedAt: null,
+          nuovoCount: 0,
+          inPrestitoCount: 0,
+          wishlistCount: 0,
+          ownedCount: 0,
         }
       );
     },
