@@ -30,11 +30,21 @@ export function DashboardRenderer() {
     useDashboardSearchStore();
 
   const handleModalSuccess = useCallback(
-    ({ gameId, threadId, agentId }: { gameId: string; threadId: string; agentId: string }) => {
+    ({
+      gameId,
+      threadId,
+      agentId,
+      gameName,
+    }: {
+      gameId: string;
+      threadId: string;
+      agentId: string;
+      gameName: string;
+    }) => {
       setSelectedGame(null);
-      openChatDrawer({ threadId, agentId, gameId, gameName: selectedGame?.name ?? '' });
+      openChatDrawer({ threadId, agentId, gameId, gameName });
     },
-    [selectedGame, setSelectedGame, openChatDrawer]
+    [setSelectedGame, openChatDrawer]
   );
 
   return (

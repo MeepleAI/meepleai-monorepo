@@ -255,6 +255,7 @@ function DrawerEntityRouter({
             threadId={liveChatData.threadId}
             agentId={liveChatData.agentId}
             gameId={liveChatData.gameId}
+            gameName={liveChatData.gameName}
           />
         );
       }

@@ -30,22 +30,28 @@ export interface EmbeddedChatViewProps {
   agentId: string;
   /** Game ID for context */
   gameId: string;
+  /** Game name for ProxyGameContext */
+  gameName?: string;
 }
 
 // ============================================================================
 // Component
 // ============================================================================
 
-export function EmbeddedChatView({ threadId, agentId, gameId }: EmbeddedChatViewProps) {
+export function EmbeddedChatView({ threadId, agentId, gameId, gameName }: EmbeddedChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
 
   // SSE streaming
-  const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
+  const {
+    state: streamState,
+    sendMessage: sendViaSSE,
+    stopStreaming,
+  } = useAgentChatStream({
     onComplete: (answer, metadata) => {
       const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
+        id: `assistant-${crypto.randomUUID()}`,
         role: 'assistant',
         content: answer,
         timestamp: new Date().toISOString(),
@@ -59,6 +65,13 @@ export function EmbeddedChatView({ threadId, agentId, gameId }: EmbeddedChatView
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamState.currentAnswer]);
 
+  // Stop SSE streaming on unmount
+  useEffect(() => {
+    return () => {
+      stopStreaming();
+    };
+  }, [stopStreaming]);
+
   // Send message handler
   const handleSend = useCallback(
     (e: React.FormEvent) => {
@@ -68,7 +81,7 @@ export function EmbeddedChatView({ threadId, agentId, gameId }: EmbeddedChatView
 
       // Optimistic UI: add user message
       const userMessage: ChatMessage = {
-        id: `user-${Date.now()}`,
+        id: `user-${crypto.randomUUID()}`,
         role: 'user',
         content,
         timestamp: new Date().toISOString(),
@@ -77,9 +90,15 @@ export function EmbeddedChatView({ threadId, agentId, gameId }: EmbeddedChatView
       setInputValue('');
 
       // Send via SSE
-      sendViaSSE(agentId, content, threadId, { gameName: '', agentTypology: '' }, undefined);
+      sendViaSSE(
+        agentId,
+        content,
+        threadId,
+        { gameName: gameName ?? '', agentTypology: '' },
+        undefined
+      );
     },
-    [inputValue, agentId, threadId, sendViaSSE]
+    [inputValue, agentId, threadId, gameName, sendViaSSE]
   );
 
   return (

@@ -45,7 +45,12 @@ export interface AddToLibraryModalProps {
   game: AddToLibraryModalGame | null;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (result: { gameId: string; threadId: string; agentId: string }) => void;
+  onSuccess: (result: {
+    gameId: string;
+    threadId: string;
+    agentId: string;
+    gameName: string;
+  }) => void;
 }
 
 type ModalState =
@@ -108,6 +113,7 @@ export function AddToLibraryModal({ game, isOpen, onClose, onSuccess }: AddToLib
         gameId: game.id,
         threadId: thread.id,
         agentId: thread.agentId ?? '',
+        gameName: game.name,
       });
     } catch {
       setState({
@@ -129,6 +135,7 @@ export function AddToLibraryModal({ game, isOpen, onClose, onSuccess }: AddToLib
         gameId: game.id,
         threadId: thread.id,
         agentId: thread.agentId ?? '',
+        gameName: game.name,
       });
     } catch {
       setState({

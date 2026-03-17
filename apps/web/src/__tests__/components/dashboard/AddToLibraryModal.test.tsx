@@ -139,6 +139,7 @@ describe('AddToLibraryModal', () => {
         gameId: 'game-123',
         threadId: 'thread-456',
         agentId: 'agent-789',
+        gameName: 'Catan',
       });
     });
   });
@@ -194,6 +195,7 @@ describe('AddToLibraryModal', () => {
         gameId: 'game-123',
         threadId: 'thread-456',
         agentId: 'agent-789',
+        gameName: 'Catan',
       });
     });
   });
