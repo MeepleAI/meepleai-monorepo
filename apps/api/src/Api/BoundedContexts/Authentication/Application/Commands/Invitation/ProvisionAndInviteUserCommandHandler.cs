@@ -91,7 +91,8 @@ internal sealed class ProvisionAndInviteUserCommandHandler : ICommandHandler<Pro
             command.CustomMessage,
             command.ExpiresInDays,
             _timeProvider,
-            tokenHash);
+            tokenHash,
+            command.InvitedByUserId);
 
         // 6. Add game suggestions to token
         if (command.GameSuggestions is { Count: > 0 })

@@ -1001,6 +1001,26 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Restores account status from persistence layer.
+    /// Issue #124: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreAccountStatus(UserAccountStatus status)
+    {
+        Status = status;
+    }
+
+    /// <summary>
+    /// Restores password hash from persistence layer. Null for pending (invited) users.
+    /// Issue #124: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestorePasswordHash(PasswordHash? passwordHash)
+    {
+        PasswordHash = passwordHash!;
+    }
+
+    /// <summary>
     /// Restores email verification state from persistence layer.
     /// Issue #3672: Internal method to avoid reflection in repository (S3011 compliance).
     /// Should only be called by UserRepository during entity materialization.

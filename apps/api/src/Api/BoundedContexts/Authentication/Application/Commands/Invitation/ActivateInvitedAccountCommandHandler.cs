@@ -101,6 +101,7 @@ internal sealed class ActivateInvitedAccountCommandHandler
             timeProvider: _timeProvider);
 
         // 10. Persist all changes atomically
+        await _userRepo.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _invitationRepo.UpdateAsync(invitation, cancellationToken).ConfigureAwait(false);
         await _sessionRepo.AddAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -82,6 +82,7 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
     /// <param name="customMessage">Optional custom message from admin to invitee</param>
     /// <param name="expiresInDays">Number of days until the invitation expires</param>
     /// <param name="timeProvider">TimeProvider for testable time handling</param>
+    /// <param name="invitedByUserId">Admin user who created the invitation</param>
     /// <param name="tokenHash">SHA-256 hash of the invitation token</param>
     /// <returns>New InvitationToken instance with extended data</returns>
     public static InvitationToken Create(
@@ -91,7 +92,8 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
         string? customMessage,
         int expiresInDays,
         TimeProvider timeProvider,
-        string tokenHash)
+        string tokenHash,
+        Guid invitedByUserId = default)
     {
         ArgumentNullException.ThrowIfNull(email);
         ArgumentNullException.ThrowIfNull(role);
@@ -108,7 +110,7 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
             Email = email.Value,
             Role = role.Value,
             TokenHash = tokenHash,
-            InvitedByUserId = Guid.Empty, // Set by command handler when admin context is available
+            InvitedByUserId = invitedByUserId,
             Status = InvitationStatus.Pending,
             ExpiresAt = now.AddDays(expiresInDays),
             CreatedAt = now,
