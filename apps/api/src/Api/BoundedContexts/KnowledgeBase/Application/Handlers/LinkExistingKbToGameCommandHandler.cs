@@ -1,8 +1,10 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Exceptions;
@@ -21,17 +23,20 @@ internal class LinkExistingKbToGameCommandHandler
 {
     private readonly MeepleAiDbContext _db;
     private readonly IVectorDocumentRepository _vectorDocumentRepo;
+    private readonly IRagAccessService _ragAccessService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<LinkExistingKbToGameCommandHandler> _logger;
 
     public LinkExistingKbToGameCommandHandler(
         MeepleAiDbContext db,
         IVectorDocumentRepository vectorDocumentRepo,
+        IRagAccessService ragAccessService,
         IUnitOfWork unitOfWork,
         ILogger<LinkExistingKbToGameCommandHandler> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _vectorDocumentRepo = vectorDocumentRepo ?? throw new ArgumentNullException(nameof(vectorDocumentRepo));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -67,21 +72,21 @@ internal class LinkExistingKbToGameCommandHandler
         if (targetGameId == Guid.Empty)
             throw new NotFoundException($"Game {command.TargetGameId} not found");
 
-        // 4. Check if already linked (idempotency)
-        var alreadyLinked = await _db.VectorDocuments
-            .AnyAsync(vd => vd.GameId == targetGameId
-                         && vd.PdfDocumentId == command.SourcePdfDocumentId,
-                cancellationToken).ConfigureAwait(false);
+        // 3b. Access check: user must have RAG access to target game (ownership or IsRagPublic)
+        var canAccess = await _ragAccessService.CanAccessRagAsync(
+            command.UserId, command.TargetGameId, UserRole.User, cancellationToken).ConfigureAwait(false);
+        if (!canAccess)
+            throw new ForbiddenException("Cannot link KB to a game you don't have access to");
 
-        if (alreadyLinked)
-        {
-            var existingVdId = await _db.VectorDocuments
-                .Where(vd => vd.GameId == targetGameId && vd.PdfDocumentId == command.SourcePdfDocumentId)
-                .Select(vd => vd.Id)
-                .FirstAsync(cancellationToken).ConfigureAwait(false);
+        // 4. Check if already linked (idempotency) — single query to avoid TOCTOU race
+        var existingVdId = await _db.VectorDocuments
+            .Where(vd => vd.GameId == targetGameId
+                         && vd.PdfDocumentId == command.SourcePdfDocumentId)
+            .Select(vd => (Guid?)vd.Id)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
-            return new LinkKbResultDto(existingVdId, targetGameId, command.SourcePdfDocumentId, "linked");
-        }
+        if (existingVdId.HasValue)
+            return new LinkKbResultDto(existingVdId.Value, targetGameId, command.SourcePdfDocumentId, "linked");
 
         // 5. Find source VectorDocument (if PDF is Ready)
         // VectorDocumentEntity (infra) has ChunkCount; Language comes from PdfDocumentEntity
@@ -91,11 +96,12 @@ internal class LinkExistingKbToGameCommandHandler
             .Select(vd => new { vd.Id, vd.ChunkCount, vd.SharedGameId })
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
-        if (sourceVd == null)
+        // Guard: PDF not indexed yet OR ChunkCount is 0 (indexing in progress)
+        if (sourceVd == null || sourceVd.ChunkCount <= 0)
         {
             _logger.LogInformation(
-                "PDF {PdfId} not yet indexed, link will be pending for game {GameId}",
-                command.SourcePdfDocumentId, targetGameId);
+                "PDF {PdfId} not yet fully indexed (ChunkCount={Count}), link will be pending for game {GameId}",
+                command.SourcePdfDocumentId, sourceVd?.ChunkCount ?? 0, targetGameId);
 
             return new LinkKbResultDto(Guid.Empty, targetGameId, command.SourcePdfDocumentId, "pending");
         }

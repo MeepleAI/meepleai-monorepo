@@ -478,7 +478,8 @@ internal static class KnowledgeBaseEndpoints
             InitialMessage: req.InitialMessage,
             AgentId: req.AgentId,
             AgentType: req.AgentType, // Issue #4362
-            UserRole: session.User!.Role
+            UserRole: session.User!.Role,
+            SelectedKnowledgeBaseIds: req.SelectedKnowledgeBaseIds
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
